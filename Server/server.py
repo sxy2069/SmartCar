@@ -1,31 +1,21 @@
 #!/usr/bin/python
 #coding:utf-8
-
-import datetime
-import os
-import sys
 import socket
 import threading
 import json
+
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
+
 import tkinter as tk
 import tkinter.ttk as ttk
 
-matplotlib.use('TkAgg')
+from mylib.myFunction.myfunction import *
 
-sendCmd = {"deviceName":"","mode":"STOP","speed":1}
-
-def translate(value, leftMin, leftMax, rightMin, rightMax):
-    leftSpan = leftMax - leftMin
-    rightSpan = rightMax - rightMin
-    valueScaled = float(value - leftMin) / float(leftSpan)
-    return rightMin + (valueScaled * rightSpan)
-  
 def handle(ip_port,new_client):
     json_data= bytearray()
     startFlag = False 
@@ -70,23 +60,18 @@ def handle(ip_port,new_client):
         clientdict.pop(ip_port[0],None)
         set_optionmenu(list(clientdict))
         print(e)
-        print ("client timeOut Closed")
     except OSError as e:
-        #new_client.close()
-        #clientdict.pop(ip_port[0],None)
-        #set_optionmenu(list(clientdict))
-        print ("lj")
+        new_client.close()
+        clientdict[ip_port[0]]['lable'].remove()
+        clientdict.pop(ip_port[0],None)
+        set_optionmenu(list(clientdict))
+        print (e)
     except ConnectionResetError as e:
-        #new_client.close()
-        #clientdict.pop(ip_port[0],None)
-        #set_optionmenu(list(clientdict))
-        print("zj")
-                
-def set_optionmenu(opl:list):
-    clientList.delete(0, "end") 
-    for op in opl:
-        clientList.insert('end', op)
-    clientList.insert(0, "BROADCAST")
+        new_client.close()
+        clientdict[ip_port[0]]['lable'].remove()
+        clientdict.pop(ip_port[0],None)
+        set_optionmenu(list(clientdict))
+        print (e)      
               
 def tcpServer():
     tcp_server_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -126,6 +111,12 @@ def update(num):
     scat.set_offsets([[0,0],[0,0]])
   return scat,
 
+def set_optionmenu(opl:list):
+    clientList.delete(0, "end") 
+    for op in opl:
+        clientList.insert('end', op)
+    clientList.insert(0, "BROADCAST")
+
 def cmdSend():
     if clientList.curselection():
       ipAddress = clientList.get(clientList.curselection())
@@ -138,7 +129,6 @@ def cmdSend():
           clientHost['lable'].remove()
           clientdict.pop(ipAddress,None)
           set_optionmenu(list(clientdict))
-          print ("567")
       elif(ipAddress =="BROADCAST"):
         if clientdict:
           for x,y in clientdict.items():
@@ -153,34 +143,10 @@ def cmdSend():
         else:
           clientList.delete(0, "end")
     
-def forward():
-  sendCmd["mode"] = "FORWARD"
-  cmdSend()
-  
-def backward():
-  sendCmd["mode"] = "BACKWARD"
-  cmdSend()
-  
-def turnLeft():
-  sendCmd["mode"] = "TURNLEFT"
-  cmdSend()
-  
-def turnRight():
-  sendCmd["mode"] = "TURNRIGHT"
-  cmdSend()
-  
-def rotateLeft():
-  sendCmd["mode"] = "ROTATELEFT"
-  cmdSend()
-  
-def rotateRight():
-  sendCmd["mode"] = "ROTATERIGHT"
-  cmdSend()
-  
-def stop():
-    sendCmd["mode"] = "STOP"
+def carControl(mode):
+    sendCmd["mode"] = mode
     cmdSend()
-    
+
 def updateData():
   speed = entry.get()
   try:
@@ -200,10 +166,13 @@ def updateName():
     print(e)
    
 if __name__ == '__main__':
+  
+  sendCmd = {"deviceName":"","mode":"STOP","speed":1}
   clientdict={}
   tk_x =[]
   tk_y =[]
   
+  matplotlib.use('TkAgg')
   root = tk.Tk()
   root.title("Motor_ControlGUI")
   root.geometry('1600x1200')
@@ -226,31 +195,31 @@ if __name__ == '__main__':
   canvas_spice.get_tk_widget().place(x=10,y=150)
   canvas_spice.draw()
   
-  b0 = tk.Button(root,text="前进",command=forward)
+  b0 = tk.Button(root,text="前进", command = lambda:carControl("FORWARD"))
   b0.pack()
   b0.place(x=300,y=30)
   
-  b1 = tk.Button(root,text="后退",command=backward)
+  b1 = tk.Button(root,text="后退",command = lambda:carControl("BACKWARD"))
   b1.pack()
   b1.place(x=400,y=30)
   
-  b2 = tk.Button(root,text="左转",command=turnLeft)
+  b2 = tk.Button(root,text="左转",command = lambda:carControl("TURNLEFT"))
   b2.pack()
   b2.place(x=500,y=30)
   
-  b3 = tk.Button(root,text="右转",command=turnRight)
+  b3 = tk.Button(root,text="右转",command = lambda:carControl("TURNRIGHT"))
   b3.pack()
   b3.place(x=600,y=30)
   
-  b6 = tk.Button(root,text="停止",command=stop)
+  b6 = tk.Button(root,text="停止",command = lambda:carControl("STOP"))
   b6.pack()
   b6.place(x=700,y=30)
   
-  b4 = tk.Button(root,text="原地左转",command=rotateLeft)
+  b4 = tk.Button(root,text="原地左转",command = lambda:carControl("ROTATELEFT"))
   b4.pack()
   b4.place(x=300,y=90)
   
-  b5 = tk.Button(root,text="原地右转",command=rotateRight)
+  b5 = tk.Button(root,text="原地右转",command = lambda:carControl("ROTATERIGHT"))
   b5.pack()
   b5.place(x=400,y=90)
   
