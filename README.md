@@ -1,5 +1,5 @@
 # SmartCar使用说明
-  通过TCP协议控制多辆小车运动，并接收小车发送的信息
+  通过TCP协议控制多辆小车运动，并接收小车发送的信息，通信数据格式为json.
 ### 环境配置
   - 路由器SSID：Freedomislife
   - 路由器PASW：Freedomislife
