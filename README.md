@@ -9,11 +9,11 @@
   - 服务器端PORT：5650
 ###### 主机环境
      安装python3
-     安装python包
-      `pip install matplotlib`
-      `pip install numpy`
-     运行程序
-      ` python server.py `
+     安装python包：
+        pip install matplotlib
+        pip install numpy
+     运行程序：
+        python main.py
 ### 小车程序
   见Client文件夹，使用ESP32作为主控，使用esp-NOW组网
 
