@@ -2,7 +2,7 @@
 #include <WiFi.h>
 #include <esp_now.h>
 #include <TaskScheduler.h>
-#include <motor.h>
+#include <Car.h>
 #include <OpticalData.h>
 #include <ArduinoJson.h>
 #include <PID_v1.h>
@@ -22,7 +22,7 @@ double left_speedValue, right_speedValue;   //设置电机速度
 PID myPIDL(&abs_durationL, &left_speedValue, &SetpointL, Kp, Ki, Kd, DIRECT);
 PID myPIDR(&abs_durationR, &right_speedValue, &SetpointR, Kp, Ki, Kd, DIRECT);
 
-Motor motor(&left_speedValue,&right_speedValue);
+Car car;
 // 接收JSON格式数据
 boolean beginFlag = 0; //json数据刚开始接收
 unsigned char count = 0; //多层json数据计数
@@ -44,9 +44,9 @@ OpticalData data(4,14);
 
 IPAddress localIP;
 
-car_data pdata;
-car_data rdata;
-control_cmd cmd = {STOP, 0};
+CarData pdata;
+CarData rdata;
+ControlCmd cmd = {STOP, 0};
 
 double X_cor;
 double Y_cor;
@@ -67,13 +67,13 @@ Scheduler ts; // to control your personal task
 void broadcast();            // 板子之间广播信息
 void connectToServer();            // 和上位机交互
 void getCameraData();            // 读取定位信息
-void motorChangeSpeed(); // 电机调速
+void carChangeSpeed(); // 电机调速
 void PIDHandle();          // PID调节
 
 Task BroadcastTask(50, TASK_FOREVER, &broadcast, &ts, true);
 Task ConnectToServerTask(50, TASK_FOREVER, &connectToServer, &ts, true);
 Task GetCameraDataTask(40, TASK_FOREVER, &getCameraData, &ts, true);
-Task MotorChangeSpeedTask(100, TASK_FOREVER, &motorChangeSpeed, &ts, true);
+Task CarChangeSpeedTask(100, TASK_FOREVER, &carChangeSpeed, &ts, true);
 Task PIDTask(TASK_IMMEDIATE, TASK_FOREVER, &PIDHandle, &ts, true);
 
 //和上位机通信
@@ -176,7 +176,7 @@ void getCameraData()
 } 
 
 //电机调节
-void motorChangeSpeed()
+void carChangeSpeed()
 {
   if (cmd.mode == STOP)
   {
@@ -195,25 +195,25 @@ void motorChangeSpeed()
   switch (cmd.mode)
   {
   case FORWARD:
-    motor.forward();
+    car.forward(left_speedValue,right_speedValue);
     break;
   case BACKWARD:
-    motor.backward();
+    car.backward(left_speedValue,right_speedValue);
     break;
   case TURNLEFT:
-    motor.turnLeft();
+    car.turnLeft(right_speedValue);
     break;
   case TURNRIGHT:
-    motor.turnRight();
+    car.turnRight(left_speedValue);
     break;
   case ROTATELEFT:
-    motor.rotateLeft();
+    car.rotateLeft(left_speedValue, right_speedValue);
     break;
   case ROTATERIGHT:
-    motor.rotateRight();
+    car.rotateRight(left_speedValue, right_speedValue);
     break;
   case STOP:
-    motor.stop();
+    car.stop();
     break;
   }
 } // 电机调速
@@ -361,7 +361,7 @@ void setup()
     delay(3000);
     ESP.restart();
   }
-  motor.motor_init();
+  car.init();
 
   SetpointR = 0; // 设置PID的输出值
   SetpointL = 0; // 设置PID的输出值

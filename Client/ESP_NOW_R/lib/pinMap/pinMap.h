@@ -1,5 +1,5 @@
-#ifndef _PINMAP_h
-#define _PINMAP_h
+#ifndef _PINMAP_H
+#define _PINMAP_H
 
 #include "Arduino.h"
 
