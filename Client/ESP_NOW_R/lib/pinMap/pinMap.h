@@ -7,6 +7,27 @@
 #define SCK 4
 #define SDIO 14
 
+//RGB strip_PIN
+#define RGB_DATA 2
+//SPI
+#define MOSI 23
+#define MISO 19
+#define SCLK 18
+#define CS 5
+//I2C
+#define SDA 2
+#define SCL 2
+
+//UART
+//串口0即TYPEC接口，用于下载程序以及调试程序
+
+//GPIO15引出用于外设
+//GPIO12引出用于外设
+
+//UART2
+#define TX2 17
+#define RX2 16
+
 /*电机A驱动引脚定义*/
 #define Apin1  25
 #define Apin2  26

@@ -40,7 +40,7 @@ void EncoderInitR();
 void wheelSpeedR();
 
 //定位模块对象初始化
-OpticalData data(4,14);
+OpticalData data;
 
 IPAddress localIP;
 

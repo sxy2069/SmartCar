@@ -3,6 +3,7 @@
 
 //导入arduino核心头文件
 #include "Arduino.h"
+#include <PinMap.h>
 //typedef unsigned char uint8_t; // 8bit无符号类型
 //typedef unsigned long int uint32_t;  //32bit无符号类型
 
@@ -31,7 +32,7 @@ class OpticalData{
     uint8_t Write_Register(uint16_t Data1,uint16_t Data2);
     
     public:
-    OpticalData(uint8_t SCK_PIN , uint8_t SDIO_PIN);
+    OpticalData(uint8_t SCK_PIN = SCK , uint8_t SDIO_PIN = SDIO);
     void begin(void);
     double getYcoordinate(void);
     double getXcoordinate(void);
