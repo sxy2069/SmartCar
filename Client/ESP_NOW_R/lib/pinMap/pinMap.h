@@ -1,8 +1,6 @@
 #ifndef _PINMAP_H
 #define _PINMAP_H
 
-#include "Arduino.h"
-
 /*定位模块引脚定义*/
 #define SCK 4
 #define SDIO 14
@@ -15,8 +13,8 @@
 #define SCLK 18
 #define CS 5
 //I2C
-#define SDA 2
-#define SCL 2
+#define SDA 21
+#define SCL 22
 
 //UART
 //串口0即TYPEC接口，用于下载程序以及调试程序
