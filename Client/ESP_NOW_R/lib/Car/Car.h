@@ -23,7 +23,6 @@ typedef struct
 
 typedef struct
 {
-  String macAddress;
   String deviceName;
   volatile double x;
   volatile double y;

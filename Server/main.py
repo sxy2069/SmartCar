@@ -18,36 +18,41 @@ from mylib.myFunction.myfunction import *
 
 def handle(ip_port,new_client):
     json_data= bytearray()
-    startFlag = False 
+    startFlag = False
+    completeFlag = False
+    startCount = 0
     try:
       while  True:
             rece_data = new_client.recv(1)
             if rece_data:
               if rece_data ==b'{' and startFlag == False:
                 startFlag = True
+              if startFlag == True:
+                if rece_data ==b'{':
+                  startCount = startCount + 1
+                if rece_data == b'}':
+                  startCount = startCount - 1
                 json_data = json_data + rece_data
-              elif rece_data ==b'}' and startFlag == True:
-                startFlag = False
-                json_data = json_data + rece_data
-                CameraDataString = json_data.decode('ascii')
-                CameraData = json.loads(CameraDataString)
-                x= round(CameraData['x'], 2)
-                y= round(CameraData['y'], 2)
-                x= translate(int(x),500,1000,0,1000)
-                y = translate(int(y),0,500,0,1000)
-                deviceName = CameraData['deviceName']
-                if deviceName == "":
-                  clientdict[ip_port[0]]['motorData'][0] = CameraData['macAddress']
-                else:
-                  clientdict[ip_port[0]]['motorData'][0] = deviceName
-                clientdict[ip_port[0]]['motorData'][1] = x
-                clientdict[ip_port[0]]['motorData'][2] = y
-                clientdict[ip_port[0]]['motorData'][3] = CameraData['angle']
-                res = "LocalIP is {},point_x is {},point_y is {},angle is {}".format(ip_port[0],x,y,CameraData['angle'])
+                if startCount == 0:
+                  startFlag = False
+                  completeFlag = True
+              if completeFlag == True:
+                completeFlag = False
+                inputString = json_data.decode('ascii')
                 json_data = b''
-              else:
-                if startFlag == True:
-                  json_data= json_data + rece_data
+                print(inputString)
+                inputJson = json.loads(inputString)
+                if inputJson['sensor'] == "camera":
+                  x= round(inputJson['value']['x'], 2)
+                  y= round(inputJson['value']['y'], 2)
+                  x= translate(int(x),500,1000,0,1000)
+                  y = translate(int(y),0,500,0,1000)
+                  deviceName = inputJson['device']
+                  clientdict[ip_port[0]]['motorData'][0] = deviceName
+                  clientdict[ip_port[0]]['motorData'][1] = x
+                  clientdict[ip_port[0]]['motorData'][2] = y
+                  clientdict[ip_port[0]]['motorData'][3] = inputJson['value']['angle']
+                  res = "LocalIP is {},point_x is {},point_y is {},angle is {}".format(ip_port[0],x,y,inputJson['value']['angle'])   
             else:
               print("client Closed")
               clientdict[ip_port[0]]['lable'].remove()
@@ -144,7 +149,7 @@ def cmdSend():
           clientList.delete(0, "end")
     
 def carControl(mode):
-    sendCmd["mode"] = mode
+    sendCmd['value']['mode'] = mode
     cmdSend()
 
 def updateData():
@@ -152,7 +157,7 @@ def updateData():
   try:
     speed = int(speed)
     if(speed>=0 and speed <=0xff):
-      sendCmd["speed"] = speed
+      sendCmd['value']['speed'] = speed
       cmdSend()
   except ValueError as e:
     print(e)
@@ -160,14 +165,14 @@ def updateData():
 def updateName():
   value = entryName.get()
   try:
-    sendCmd["deviceName"] = value
+    sendCmd["device"] = value
     cmdSend()
   except ValueError as e:
     print(e)
    
 if __name__ == '__main__':
   
-  sendCmd = {"deviceName":"","mode":"STOP","speed":1}
+  sendCmd = {"device":"","actuator":"car","action":"update","value":{"mode":"STOP","speed":0}}
   clientdict={}
   tk_x =[]
   tk_y =[]

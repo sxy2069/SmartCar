@@ -14,32 +14,32 @@ byte encoder0PinCLast;
 
 double durationL, durationR, abs_durationL, abs_durationR; // the number of the pulses
 boolean DirectionL, DirectionR;                            // the rotation direction
-boolean resultL, resultR; //PID 调节返回值
+boolean resultL, resultR;                                  // PID 调节返回值
 
-double SetpointL, SetpointR;   //设置电机速度
+double SetpointL, SetpointR; // 设置电机速度
 double Kp = 0.5, Ki = 0.5, Kd = 0;
-double left_speedValue, right_speedValue;   //设置电机速度
+double left_speedValue, right_speedValue; // 设置电机速度
 PID myPIDL(&abs_durationL, &left_speedValue, &SetpointL, Kp, Ki, Kd, DIRECT);
 PID myPIDR(&abs_durationR, &right_speedValue, &SetpointR, Kp, Ki, Kd, DIRECT);
 
 Car car;
 // 接收JSON格式数据
-boolean beginFlag = 0; //json数据刚开始接收
-unsigned char count = 0; //多层json数据计数
-boolean stringComplete = false;//json数据接收完毕一帧数据
-String inputString = ""; //json字符串
+boolean beginFlag = 0;          // json数据刚开始接收
+unsigned char count = 0;        // 多层json数据计数
+boolean stringComplete = false; // json数据接收完毕一帧数据
+String inputString = "";        // json字符串
 
 // 声明定位数据读取函数
 void dataRead();
 void getCor();
 
-//编码器数据采集
+// 编码器数据采集
 void EncoderInitL();
 void wheelSpeedL();
 void EncoderInitR();
 void wheelSpeedR();
 
-//定位模块对象初始化
+// 定位模块对象初始化
 OpticalData data;
 
 IPAddress localIP;
@@ -52,23 +52,23 @@ double X_cor;
 double Y_cor;
 int angle;
 
-//路由器账号和密码
+// 路由器账号和密码
 const char *id = "Freedomislife";
 const char *psw = "Freedomislife";
 
-//远程服务器地址
+// 远程服务器地址
 const IPAddress serverIP(192, 168, 5, 100); // 欲访问的服务端IP地址
 uint16_t serverPort = 5650;
 WiFiClient client;
 
 Scheduler ts; // to control your personal task
 
-//任务处理函数
-void broadcast();            // 板子之间广播信息
-void connectToServer();            // 和上位机交互
-void getCameraData();            // 读取定位信息
-void carChangeSpeed(); // 电机调速
-void PIDHandle();          // PID调节
+// 任务处理函数
+void broadcast();       // 板子之间广播信息
+void connectToServer(); // 和上位机交互
+void getCameraData();   // 读取定位信息
+void carChangeSpeed();  // 电机调速
+void PIDHandle();       // PID调节
 
 Task BroadcastTask(50, TASK_FOREVER, &broadcast, &ts, true);
 Task ConnectToServerTask(50, TASK_FOREVER, &connectToServer, &ts, true);
@@ -76,18 +76,19 @@ Task GetCameraDataTask(40, TASK_FOREVER, &getCameraData, &ts, true);
 Task CarChangeSpeedTask(100, TASK_FOREVER, &carChangeSpeed, &ts, true);
 Task PIDTask(TASK_IMMEDIATE, TASK_FOREVER, &PIDHandle, &ts, true);
 
-//和上位机通信
+// 和上位机通信
 void connectToServer()
 {
   if (client.connected()) // 尝试访问目标地址
   {
-    StaticJsonDocument<150> doc;
-    doc["macAddress"] = pdata.macAddress;
-    doc["deviceName"] = pdata.deviceName;
-    doc["x"] = pdata.x;
-    doc["y"] = pdata.y;
-    doc["angle"] = pdata.angle;
-    char json_string[256];
+    StaticJsonDocument<256> doc;
+    doc["device"] = pdata.deviceName;
+    doc["sensor"] = "camera";
+    JsonObject root = doc.createNestedObject("value");
+    root["x"] = pdata.x;
+    root["y"] = pdata.y;
+    root["angle"] = pdata.angle;
+    char json_string[300];
     serializeJson(doc, json_string);
     client.print(json_string);
     while (client.available())
@@ -120,46 +121,51 @@ void connectToServer()
       stringComplete = false;
       Serial.println(inputString);
       DeserializationError error = deserializeJson(doc, inputString.c_str());
+      inputString = "";
       if (error)
       {
         Serial.print(F("deserializeJson() failed: "));
         Serial.println(error.f_str());
-        inputString = "";
         return;
       }
-      
-      pdata.deviceName = doc["deviceName"].as<String>();
-      if (doc["mode"] == "STOP")
+
+      pdata.deviceName = doc["device"].as<String>();
+      if (doc["actuator"] == "car")
       {
-        cmd.mode = STOP;
+        if (doc["action"] == "update")
+        {
+          if (doc["value"]["mode"] == "STOP")
+          {
+            cmd.mode = STOP;
+          }
+          else if (doc["value"]["mode"] == "FORWARD")
+          {
+            cmd.mode = FORWARD;
+          }
+          else if (doc["value"]["mode"] == "BACKWARD")
+          {
+            cmd.mode = BACKWARD;
+          }
+          else if (doc["value"]["mode"] == "TURNLEFT")
+          {
+            cmd.mode = TURNLEFT;
+          }
+          else if (doc["value"]["mode"] == "TURNRIGHT")
+          {
+            cmd.mode = TURNRIGHT;
+          }
+          else if (doc["value"]["mode"] == "ROTATELEFT")
+          {
+            cmd.mode = ROTATELEFT;
+          }
+          else if (doc["value"]["mode"] == "ROTATERIGHT")
+          {
+            cmd.mode = ROTATERIGHT;
+          }
+          Serial.println(cmd.mode);
+          cmd.speed = doc["value"]["speed"];
+        }
       }
-      else if (doc["mode"] == "FORWARD")
-      {
-        cmd.mode = FORWARD;
-      }
-      else if (doc["mode"] == "BACKWARD")
-      {
-        cmd.mode = BACKWARD;
-      }
-      else if (doc["mode"] == "TURNLEFT")
-      {
-        cmd.mode = TURNLEFT;
-      }
-      else if (doc["mode"] == "TURNRIGHT")
-      {
-        cmd.mode = TURNRIGHT;
-      }
-      else if (doc["mode"] == "ROTATELEFT")
-      {
-        cmd.mode = ROTATELEFT;
-      }
-      else if (doc["mode"] == "ROTATERIGHT")
-      {
-        cmd.mode = ROTATERIGHT;
-      }
-      Serial.println(cmd.mode);
-      cmd.speed = doc["speed"];
-      inputString = "";
     }
   }
   else
@@ -169,13 +175,13 @@ void connectToServer()
   }
 }
 
-//获取定位数据
+// 获取定位数据
 void getCameraData()
 {
   getCor();
-} 
+}
 
-//电机调节
+// 电机调节
 void carChangeSpeed()
 {
   if (cmd.mode == STOP)
@@ -195,10 +201,10 @@ void carChangeSpeed()
   switch (cmd.mode)
   {
   case FORWARD:
-    car.forward(left_speedValue,right_speedValue);
+    car.forward(left_speedValue, right_speedValue);
     break;
   case BACKWARD:
-    car.backward(left_speedValue,right_speedValue);
+    car.backward(left_speedValue, right_speedValue);
     break;
   case TURNLEFT:
     car.turnLeft(right_speedValue);
@@ -218,7 +224,7 @@ void carChangeSpeed()
   }
 } // 电机调速
 
-//PID控制
+// PID控制
 void PIDHandle()
 {
   abs_durationR = abs(durationR);
@@ -339,7 +345,7 @@ void setup()
   WiFi.mode(WIFI_AP_STA);
   // Print MAC address
   // Serial.print("MAC Address: ");
-  pdata.macAddress = WiFi.macAddress();
+  pdata.deviceName = WiFi.macAddress();
   // Serial.println(pdata.mac);
   WiFi.begin(id, psw);
   while (WiFi.status() != WL_CONNECTED)
