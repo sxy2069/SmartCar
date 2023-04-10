@@ -1,6 +1,6 @@
 #!/usr/bin/python
 #coding:utf-8
-
+  
 def translate(value, leftMin, leftMax, rightMin, rightMax):
     leftSpan = leftMax - leftMin
     rightSpan = rightMax - rightMin

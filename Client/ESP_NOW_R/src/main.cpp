@@ -5,22 +5,21 @@
 #include <Car.h>
 #include <OpticalData.h>
 #include <ArduinoJson.h>
-#include <PID_v1.h>
 #define _TASK_SLEEP_ON_IDLE_RUN
 
 // PID相关参数
 byte encoder0PinALast;
 byte encoder0PinCLast;
-
+// 编码器值
 double durationL, durationR, abs_durationL, abs_durationR; // the number of the pulses
-boolean DirectionL, DirectionR;                            // the rotation direction
-boolean resultL, resultR;                                  // PID 调节返回值
+// 方向
+boolean DirectionL, DirectionR; // the rotation direction
 
-double SetpointL, SetpointR; // 设置电机速度
-double Kp = 0.5, Ki = 0.5, Kd = 0;
+int startPWM = 45;
+int PWM_Restrict = 210;
+
+// 设置电机速度
 double left_speedValue, right_speedValue; // 设置电机速度
-PID myPIDL(&abs_durationL, &left_speedValue, &SetpointL, Kp, Ki, Kd, DIRECT);
-PID myPIDR(&abs_durationR, &right_speedValue, &SetpointR, Kp, Ki, Kd, DIRECT);
 
 Car car;
 // 接收JSON格式数据
@@ -28,7 +27,7 @@ boolean beginFlag = 0;          // json数据刚开始接收
 unsigned char count = 0;        // 多层json数据计数
 boolean stringComplete = false; // json数据接收完毕一帧数据
 String inputString = "";        // json字符串
-
+boolean changeSpeedFlag = false;
 // 声明定位数据读取函数
 void dataRead();
 void getCor();
@@ -73,8 +72,32 @@ void PIDHandle();       // PID调节
 Task BroadcastTask(50, TASK_FOREVER, &broadcast, &ts, true);
 Task ConnectToServerTask(50, TASK_FOREVER, &connectToServer, &ts, true);
 Task GetCameraDataTask(40, TASK_FOREVER, &getCameraData, &ts, true);
-Task CarChangeSpeedTask(100, TASK_FOREVER, &carChangeSpeed, &ts, true);
-Task PIDTask(TASK_IMMEDIATE, TASK_FOREVER, &PIDHandle, &ts, true);
+Task PIDTask(50, TASK_FOREVER, &PIDHandle, &ts, true);
+
+typedef struct
+{
+  int SetPoint;     // 设定目标 Desired Value
+  float Proportion; // 比例常数 Proportional Const
+  float Integral;   // 积分常数 Integral  Const
+  float Derivative; // 微分常数 Derivative Const
+  int LastError;    // Error[-1]
+  int PrevError;    // Error[-2]
+} PID;
+
+int IncPIDCalc(PID *sptr, int NextPoint)
+{
+  register int iError, iIncpid;
+  iError = sptr->SetPoint - NextPoint;
+  iIncpid = sptr->Proportion * (iError - sptr->LastError)                          // E[k] 项
+            + sptr->Integral * sptr->LastError                                     // E[k－1]项
+            + sptr->Derivative * (iError - 2 * sptr->LastError + sptr->PrevError); // E[k－2]项
+  sptr->PrevError = sptr->LastError;
+  sptr->LastError = iError;
+  return (iIncpid);
+}
+PID speedL = {0, 0.5, 0.2, 0.1, 0, 0}; // 速度PID
+PID speedR = {0, 0.5, 0.2, 0.1, 0, 0}; // 速度PID
+PID dspeed = {0, 0.1, 0.3, 0, 0, 0};  // 转速差PID
 
 // 和上位机通信
 void connectToServer()
@@ -119,7 +142,7 @@ void connectToServer()
     if (stringComplete)
     {
       stringComplete = false;
-      Serial.println(inputString);
+      // Serial.println(inputString);
       DeserializationError error = deserializeJson(doc, inputString.c_str());
       inputString = "";
       if (error)
@@ -134,6 +157,7 @@ void connectToServer()
       {
         if (doc["action"] == "update")
         {
+          changeSpeedFlag = true;
           if (doc["value"]["mode"] == "STOP")
           {
             cmd.mode = STOP;
@@ -162,8 +186,16 @@ void connectToServer()
           {
             cmd.mode = ROTATERIGHT;
           }
-          Serial.println(cmd.mode);
           cmd.speed = doc["value"]["speed"];
+        }
+        else if (doc["action"] == "set")
+        {
+          speedL.Proportion = doc["value"]["KP"];
+          speedL.Integral = doc["value"]["KI"];
+          speedR.Proportion = doc["value"]["KP"];
+          speedR.Integral = doc["value"]["KI"];
+          dspeed.Proportion = doc["value"]["KP1"];
+          dspeed.Integral = doc["value"]["KI1"];
         }
       }
     }
@@ -180,24 +212,67 @@ void getCameraData()
 {
   getCor();
 }
+// PID数据结构
 
-// 电机调节
-void carChangeSpeed()
+// PID控制
+void PIDHandle()
 {
-  if (cmd.mode == STOP)
+  abs_durationL = abs(durationL);
+  abs_durationR = abs(durationR);
+  if (changeSpeedFlag == true)
   {
-    cmd.speed = 0;
+    if (cmd.speed < 0 || cmd.speed > 255)
+    {
+      return;
+    }
+    changeSpeedFlag = false;
+    switch (cmd.mode)
+    {
+    case TURNLEFT:
+      speedR.SetPoint = cmd.speed;
+      speedL.SetPoint = 0;
+      dspeed.SetPoint = -cmd.speed;
+      break;
+    case TURNRIGHT:
+      speedR.SetPoint = 0;
+      speedL.SetPoint = cmd.speed;
+      dspeed.SetPoint = cmd.speed;
+      break;
+    case STOP:
+      speedL.SetPoint = 0;
+      speedR.SetPoint = 0;
+      dspeed.SetPoint = 0;
+      break;
+    default:
+      speedL.SetPoint = cmd.speed;
+      speedR.SetPoint = cmd.speed;
+      dspeed.SetPoint = 0;
+    }
   }
-  if (cmd.speed >= 0 && cmd.speed <= 255)
-  {
-    SetpointR = cmd.speed;
-    SetpointL = cmd.speed;
-  }
-  else
-  {
-    return;
-  }
-
+  left_speedValue += IncPIDCalc(&speedL, abs_durationL);
+  right_speedValue += IncPIDCalc(&speedR, abs_durationR);
+  if (left_speedValue < 45)
+    left_speedValue = 45;
+  else if (left_speedValue > 255)
+    left_speedValue = 255;
+  if (right_speedValue < 45)
+    right_speedValue = 45;
+  else if (right_speedValue > 255)
+    right_speedValue = 255;
+  int dTotal = abs_durationL - abs_durationR;
+  int dspeedValue = IncPIDCalc(&dspeed, dTotal);
+  Serial.print("abs_durationL::");
+  Serial.println(abs_durationL);
+  Serial.print("abs_durationR::");
+  Serial.println(abs_durationR);
+  Serial.print("dTotal=");
+  Serial.println(dTotal);
+  Serial.print("dspeedValue=");
+  Serial.println(dspeedValue);
+  Serial.print("left_speedValue");
+  Serial.println(left_speedValue);
+  Serial.print("right_speedValue=");
+  Serial.println(right_speedValue);
   switch (cmd.mode)
   {
   case FORWARD:
@@ -222,33 +297,9 @@ void carChangeSpeed()
     car.stop();
     break;
   }
-} // 电机调速
 
-// PID控制
-void PIDHandle()
-{
-  abs_durationR = abs(durationR);
-  abs_durationL = abs(durationL);
-  resultR = myPIDR.Compute(); // PID转换完成返回值为1
-  resultL = myPIDL.Compute(); // PID转换完成返回值为1
-  if (resultR)
-  {
-    // Serial.print("PluseR: ");
-    // Serial.print(durationR);
-    // Serial.print("  speedValue_R::");
-    // Serial.println(speedValue_R);
-    // Serial.print(durationR);
-    durationR = 0; // 计数清零等                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               .0   待下次计数
-  }
-  if (resultL)
-  {
-    // Serial.print("PluseL: ");
-    // Serial.print(durationL);
-    // Serial.print("  speedValue_L::");
-    // Serial.print(" ");
-    // Serial.println(durationL);
-    durationL = 0; // 计数清零等待下次计数
-  }
+  durationL = 0; // 计数清零
+  durationR = 0; // 计数清零
 }
 
 void formatMacAddress(const uint8_t *macAddr, char *buffer, int maxLength)
@@ -368,14 +419,9 @@ void setup()
     ESP.restart();
   }
   car.init();
-
-  SetpointR = 0; // 设置PID的输出值
-  SetpointL = 0; // 设置PID的输出值
-
-  myPIDL.SetMode(AUTOMATIC); // 设置PID为自动模式
-  myPIDR.SetMode(AUTOMATIC); // 设置PID为自动模式
-  myPIDL.SetSampleTime(20);  // 设置PID采样频率为100ms
-  myPIDR.SetSampleTime(20);
+  speedL.SetPoint = 0;
+  speedR.SetPoint = 0;
+  dspeed.SetPoint = 0;
 
   EncoderInitL();
   EncoderInitR();

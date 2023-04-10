@@ -40,7 +40,7 @@ def handle(ip_port,new_client):
                 completeFlag = False
                 inputString = json_data.decode('ascii')
                 json_data = b''
-                print(inputString)
+                #print(inputString)
                 inputJson = json.loads(inputString)
                 if inputJson['sensor'] == "camera":
                   x= round(inputJson['value']['x'], 2)
@@ -169,7 +169,20 @@ def updateName():
     cmdSend()
   except ValueError as e:
     print(e)
-   
+
+def  updatePID():
+  sendCmd["action"] = "set"
+  sendCmd["value"]["KP"] = KP.get()
+  sendCmd["value"]["KI"] = KI.get()
+  sendCmd["value"]["KP1"] = KP1.get()
+  sendCmd["value"]["KI1"] = KI1.get()
+  cmdSend()
+  sendCmd["action"] = "update"
+  del sendCmd["value"]["KP"]
+  del sendCmd["value"]["KI"]
+  del sendCmd["value"]["KP1"]
+  del sendCmd["value"]["KI1"]
+  
 if __name__ == '__main__':
   
   sendCmd = {"device":"","actuator":"car","action":"update","value":{"mode":"STOP","speed":0}}
@@ -243,6 +256,39 @@ if __name__ == '__main__':
   entryName = tk.Entry(root, show=None)
   entryName.pack()
   entryName.place(x=560,y=105)
+  
+  
+  kib = tk.Button(root,text="PIDUpdate",command=updatePID)
+  kib.pack()
+  kib.place(x=1250,y=90)
+ 
+  kpl = tk.Label(root,text='kp')
+  kpl.pack()
+  kpl.place(x=1325,y=50)
+  KP = tk.Entry(root, show=None)
+  KP.pack()
+  KP.place(x=1350,y=50)
+  
+  kil = tk.Label(root,text='ki')
+  kil.pack()
+  kil.place(x=1325,y=80)
+  KI = tk.Entry(root, show=None)
+  KI.pack()
+  KI.place(x=1350,y=80)
+  
+  kpl1 = tk.Label(root,text='kp1')
+  kpl1.pack()
+  kpl1.place(x=1325,y=110)
+  KP1 = tk.Entry(root, show=None)
+  KP1.pack()
+  KP1.place(x=1350,y=110)
+  
+  kil1 = tk.Label(root,text='kp1')
+  kil1.pack()
+  kil1.place(x=1325,y=140)
+  KI1 = tk.Entry(root, show=None)
+  KI1.pack()
+  KI1.place(x=1350,y=140)
   
   clientLabel = tk.Label(root,text='客户端IP')
   clientLabel.place(x=970, y=15)
