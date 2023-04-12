@@ -61,6 +61,14 @@
    - 小车各接口例子
    - 下一版本PCB电路优化
 
+  ### 帮助文档
+  - PlatformIO在线说明文档
+  <https://docs.platformio.org/en/latest/what-is-platformio.html>
+  - PlatformIO中有关ESP32的配置命令
+  <https://docs.platformio.org/en/latest/platforms/espressif32.html>
+  - github上一些分区表示例
+  <https://github.com/espressif/arduino-esp32/tree/master/tools/partitions>
+
 
 
 
