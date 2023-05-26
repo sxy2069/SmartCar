@@ -156,7 +156,7 @@ def updateData():
   speed = entry.get()
   try:
     speed = int(speed)
-    if(speed>=0 and speed <=0xff):
+    if(speed>=0 and speed <=1023):
       sendCmd['value']['speed'] = speed
       cmdSend()
   except ValueError as e:
@@ -174,14 +174,10 @@ def  updatePID():
   sendCmd["action"] = "set"
   sendCmd["value"]["KP"] = KP.get()
   sendCmd["value"]["KI"] = KI.get()
-  sendCmd["value"]["KP1"] = KP1.get()
-  sendCmd["value"]["KI1"] = KI1.get()
   cmdSend()
   sendCmd["action"] = "update"
   del sendCmd["value"]["KP"]
   del sendCmd["value"]["KI"]
-  del sendCmd["value"]["KP1"]
-  del sendCmd["value"]["KI1"]
   
 if __name__ == '__main__':
   
@@ -260,7 +256,7 @@ if __name__ == '__main__':
   
   kib = tk.Button(root,text="PIDUpdate",command=updatePID)
   kib.pack()
-  kib.place(x=1250,y=90)
+  kib.place(x=1250,y=65)
  
   kpl = tk.Label(root,text='kp')
   kpl.pack()
@@ -275,20 +271,6 @@ if __name__ == '__main__':
   KI = tk.Entry(root, show=None)
   KI.pack()
   KI.place(x=1350,y=80)
-  
-  kpl1 = tk.Label(root,text='kp1')
-  kpl1.pack()
-  kpl1.place(x=1325,y=110)
-  KP1 = tk.Entry(root, show=None)
-  KP1.pack()
-  KP1.place(x=1350,y=110)
-  
-  kil1 = tk.Label(root,text='kp1')
-  kil1.pack()
-  kil1.place(x=1325,y=140)
-  KI1 = tk.Entry(root, show=None)
-  KI1.pack()
-  KI1.place(x=1350,y=140)
   
   clientLabel = tk.Label(root,text='客户端IP')
   clientLabel.place(x=970, y=15)

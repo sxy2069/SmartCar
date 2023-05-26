@@ -18,7 +18,7 @@ typedef enum
 typedef struct
 {
   motorMode mode;
-  int speed;
+  uint32_t speed;
 } ControlCmd;
 
 typedef struct
@@ -37,7 +37,7 @@ private:
   uint8_t bit_num;
 
 public:
-  Car(uint8_t ch1 = 0, uint8_t ch2 = 1, uint8_t ch3 = 2, uint8_t ch4 = 3, uint32_t frequency = 5000, uint8_t resolution = 8);
+  Car(uint8_t ch1 = 0, uint8_t ch2 = 1, uint32_t frequency = 5000, uint8_t resolution = 10);
   void init();
   void forward(uint32_t, uint32_t);
   void backward(uint32_t, uint32_t);

@@ -3,6 +3,7 @@
 #include <esp_now.h>
 #include <TaskScheduler.h>
 #include <Car.h>
+#include <PID_v1.h>
 #include <OpticalData.h>
 #include <ArduinoJson.h>
 #define _TASK_SLEEP_ON_IDLE_RUN
@@ -15,11 +16,14 @@ double durationL, durationR, abs_durationL, abs_durationR; // the number of the 
 // 方向
 boolean DirectionL, DirectionR; // the rotation direction
 
-int startPWM = 45;
-int PWM_Restrict = 210;
-
+uint32_t startPWM = 90;
+uint32_t PWM_Restrict = 1023;
+int timeCount = 0;
+float DIFF = 0.915;
 // 设置电机速度
-double left_speedValue, right_speedValue; // 设置电机速度
+double left_speedValue, right_speedValue;                               // 设置电机速度
+double old_left_speedValue = startPWM, old_right_speedValue = startPWM; // 保存电机速度
+uint8_t startFlag = 0;
 
 Car car;
 // 接收JSON格式数据
@@ -37,7 +41,7 @@ void EncoderInitL();
 void wheelSpeedL();
 void EncoderInitR();
 void wheelSpeedR();
-
+float IncPIDCalc(PID *, int);
 // 定位模块对象初始化
 OpticalData data;
 
@@ -74,30 +78,7 @@ Task ConnectToServerTask(50, TASK_FOREVER, &connectToServer, &ts, true);
 Task GetCameraDataTask(40, TASK_FOREVER, &getCameraData, &ts, true);
 Task PIDTask(50, TASK_FOREVER, &PIDHandle, &ts, true);
 
-typedef struct
-{
-  int SetPoint;     // 设定目标 Desired Value
-  float Proportion; // 比例常数 Proportional Const
-  float Integral;   // 积分常数 Integral  Const
-  float Derivative; // 微分常数 Derivative Const
-  int LastError;    // Error[-1]
-  int PrevError;    // Error[-2]
-} PID;
-
-int IncPIDCalc(PID *sptr, int NextPoint)
-{
-  register int iError, iIncpid;
-  iError = sptr->SetPoint - NextPoint;
-  iIncpid = sptr->Proportion * (iError - sptr->LastError)                          // E[k] 项
-            + sptr->Integral * sptr->LastError                                     // E[k－1]项
-            + sptr->Derivative * (iError - 2 * sptr->LastError + sptr->PrevError); // E[k－2]项
-  sptr->PrevError = sptr->LastError;
-  sptr->LastError = iError;
-  return (iIncpid);
-}
-PID speedL = {0, 0.5, 0.2, 0.1, 0, 0}; // 速度PID
-PID speedR = {0, 0.5, 0.2, 0.1, 0, 0}; // 速度PID
-PID dspeed = {0, 0.1, 0.3, 0, 0, 0};  // 转速差PID
+PID speed = {0, 0.5, 0.2, 0, 0, 0}; // 速度PID
 
 // 和上位机通信
 void connectToServer()
@@ -190,12 +171,9 @@ void connectToServer()
         }
         else if (doc["action"] == "set")
         {
-          speedL.Proportion = doc["value"]["KP"];
-          speedL.Integral = doc["value"]["KI"];
-          speedR.Proportion = doc["value"]["KP"];
-          speedR.Integral = doc["value"]["KI"];
-          dspeed.Proportion = doc["value"]["KP1"];
-          dspeed.Integral = doc["value"]["KI1"];
+          speed.Proportion = doc["value"]["KP"];
+          speed.Integral = doc["value"]["KI"];
+          //DIFF = doc["value"]["KI"];
         }
       }
     }
@@ -221,58 +199,97 @@ void PIDHandle()
   abs_durationR = abs(durationR);
   if (changeSpeedFlag == true)
   {
-    if (cmd.speed < 0 || cmd.speed > 255)
+    if (cmd.speed < 0 || cmd.speed > PWM_Restrict)
     {
       return;
     }
     changeSpeedFlag = false;
+    startFlag = 1;
     switch (cmd.mode)
     {
     case TURNLEFT:
-      speedR.SetPoint = cmd.speed;
-      speedL.SetPoint = 0;
-      dspeed.SetPoint = -cmd.speed;
+      left_speedValue = 0;
+      right_speedValue = cmd.speed;
       break;
     case TURNRIGHT:
-      speedR.SetPoint = 0;
-      speedL.SetPoint = cmd.speed;
-      dspeed.SetPoint = cmd.speed;
+      left_speedValue = cmd.speed;
+      right_speedValue = 0;
       break;
     case STOP:
-      speedL.SetPoint = 0;
-      speedR.SetPoint = 0;
-      dspeed.SetPoint = 0;
+      left_speedValue = 0;
+      right_speedValue = 0;
       break;
     default:
-      speedL.SetPoint = cmd.speed;
-      speedR.SetPoint = cmd.speed;
-      dspeed.SetPoint = 0;
+      left_speedValue = cmd.speed;
+      right_speedValue = cmd.speed;
+      startFlag = 0;
+      speed.SetPoint = 0;
     }
   }
-  left_speedValue += IncPIDCalc(&speedL, abs_durationL);
-  right_speedValue += IncPIDCalc(&speedR, abs_durationR);
-  if (left_speedValue < 45)
-    left_speedValue = 45;
-  else if (left_speedValue > 255)
-    left_speedValue = 255;
-  if (right_speedValue < 45)
-    right_speedValue = 45;
-  else if (right_speedValue > 255)
-    right_speedValue = 255;
-  int dTotal = abs_durationL - abs_durationR;
-  int dspeedValue = IncPIDCalc(&dspeed, dTotal);
-  Serial.print("abs_durationL::");
-  Serial.println(abs_durationL);
-  Serial.print("abs_durationR::");
-  Serial.println(abs_durationR);
-  Serial.print("dTotal=");
-  Serial.println(dTotal);
-  Serial.print("dspeedValue=");
-  Serial.println(dspeedValue);
-  Serial.print("left_speedValue");
-  Serial.println(left_speedValue);
-  Serial.print("right_speedValue=");
-  Serial.println(right_speedValue);
+  if (startFlag == 0)
+  {
+    if (cmd.mode == FORWARD || cmd.mode == BACKWARD)
+    {
+      if (old_left_speedValue < cmd.speed-20 && old_right_speedValue < cmd.speed-20)
+      {
+        left_speedValue = old_left_speedValue + 20;
+        right_speedValue = old_right_speedValue + 20;
+        //right_speedValue = DIFF*right_speedValue;
+      }else{
+        left_speedValue = cmd.speed;
+        right_speedValue = DIFF*right_speedValue;
+        startFlag =1;  
+      }
+    }
+    else if (cmd.mode == STOP)
+    {
+      if (old_left_speedValue > 5 && old_right_speedValue > 5)
+      {
+        left_speedValue = old_left_speedValue - 5;
+        right_speedValue = old_right_speedValue - 5;
+      }else{
+        left_speedValue = 0;
+        right_speedValue = 0;
+        startFlag =1;
+      }
+    }
+  }
+  int dTotal = abs_durationL - abs_durationR;//计算两个轮子的转速差
+  float gapValue = IncPIDCalc(&speed, dTotal);//进行PID调速
+  //left_speedValue = left_speedValue + gapValue;//调节左轮功率值
+  right_speedValue = right_speedValue - gapValue;//调节右轮功率值
+  
+  timeCount += 1;//输出调试信息
+  //if (timeCount >= 10)
+  //{
+   // timeCount = 0;
+    //Serial.print("abs_durationL::");
+    //Serial.println(abs_durationL);
+    //Serial.print("abs_durationR::");
+    //Serial.println(abs_durationR);
+    Serial.print("dTotal::");
+    Serial.println(dTotal);
+    //Serial.print("gapValue::");
+    //Serial.print(" ");
+    //Serial.println(gapValue);
+    //Serial.print(" ");
+    Serial.print("left_speedValue=");
+    Serial.println(left_speedValue);
+    //Serial.print(" ");
+    Serial.print("right_speedValue=");
+    Serial.println(right_speedValue);
+ // }
+  if (left_speedValue < startPWM)
+    left_speedValue = startPWM;
+  else if (left_speedValue > PWM_Restrict)
+    left_speedValue = PWM_Restrict;
+  if (right_speedValue < startPWM)
+    right_speedValue = startPWM;
+  else if (right_speedValue > PWM_Restrict)
+    right_speedValue = PWM_Restrict;
+  old_left_speedValue = left_speedValue;
+  old_right_speedValue = right_speedValue;
+
   switch (cmd.mode)
   {
   case FORWARD:
@@ -297,7 +314,6 @@ void PIDHandle()
     car.stop();
     break;
   }
-
   durationL = 0; // 计数清零
   durationR = 0; // 计数清零
 }
@@ -419,9 +435,7 @@ void setup()
     ESP.restart();
   }
   car.init();
-  speedL.SetPoint = 0;
-  speedR.SetPoint = 0;
-  dspeed.SetPoint = 0;
+  speed.SetPoint = 0;
 
   EncoderInitL();
   EncoderInitR();
