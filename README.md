@@ -11,8 +11,8 @@
 ###### 主机环境
   - 安装python3
   - 安装python包：
-      pip install matplotlib
-      pip install numpy
+      - pip install matplotlib
+      - pip install numpy
   - 运行上位机程序：
     Server文件夹下，打开终端，运行一下程序：
     `python main.py`
@@ -22,42 +22,68 @@
   见Client文件夹，使用ESP32作为主控，使用esp-NOW组网
 
 ### 通信数据格式定义
-  - 定位传感器上传服务器数据:
+  1. 定位传感器上传服务器数据:
   ```
-  {"deviceType": "deviceName",
+  {"deviceType": "camera",
    "deviceName": "camera",
    "value" : {"x": 10,"y":100,"angle":60}
   }
+  ```
+   - 电池电量上传服务器数据：
+     ```
+     {"deviceType": "battery",
+      "deviceName": "battery",
+      "value" : {"voltage": 10}
+     }
+  ```
+  字段说明：
+    - "deviceType": 对象类型
+    - "deviceName": 对象名字或者对象ID
+    - "value"：    具体输出的camera数据
+    
+ 2. 服务器下发命令给单片机数据格式：
+ - 小车控制
+   - 间接控制模式，设置模式和速度
+   ```
+   {"deviceType":"motor",
+     "action":"directControl",
+     "value":{"mode":"STOP","speed":0} 
+    }
+   ```
+   - 直接控制模式，分别设置两个电机的速度，数值正负表示方向，数值绝对值大小表示速度快慢
+   ```
+    {"deviceType":"motor",
+     "action":"indirectControl",
+     "value":{"speedL":0,"speedR":0} 
+    }
+   ```
+   - 设置小车名字
+     ```
+    {"deviceType":"motor",
+     "action":"setName",
+     "value":{"deviceName":“car1”} 
+    }
+    ```
+  字段说明：
   "deviceType": 对象类型
-   "deviceName": 对象名字
-   "value"：    具体数据，如果是电池，则此处定义为{"voltage": 10}
-  ```
- - 服务器下发命令格式：
- ```
- {"deviceType":"motor",
-  "deviceName": "car1"
- "action":"setName",
- "value":{"mode":"STOP","speed":0} 
- }
-  ```
- json数据key含义：
-  ```
-  ""deviceType"": 对象类型
-  "deviceName": 对象名字
-  "action":     执行的操作类型，每种对象不一样，以下为电机控制方式
-    "setName"  
-    "indirectControl"    
-    "directControl"  
- "value":  具体发送的数据
-  "mode":   间接控制时，小车的模式种类
-    "STOP"
-    "FORWARD"
-    "BACKWARD"
-    "TURNLEFT"
-    "TURNRIGHT"
-    "ROTATELEFT"
-    "ROTATERIGHT" 
-  ```
+  "action": 执行的操作类型，每种对象不一样，以下为电机控制方式
+     - "setName"  设置小车名字或者ID
+     - "indirectControl"：  间接控制  
+     - "directControl"： 直接控制  
+  "value":  具体发送的数据
+    - "mode":   间接控制时，小车的模式种类
+      - "STOP"
+      - "FORWARD"
+      - "BACKWARD"
+      - "TURNLEFT"
+      - "TURNRIGHT"
+      - "ROTATELEFT"
+      - "ROTATERIGHT" 
+    - "speed": 小车速度(0-1023)
+    - "speedL": 小车左轮方向和速度(-1023到1023),正负表示方向，数值绝对值大小表示速度大小
+    - "speedR": 小车左轮方向和速度(-1023到1023)，正负表示方向，数值绝对值大小表示速度大小
+    -  "deviceName": 小车名字
+    
 ### todolist :
    - 解决两个电机之间因为机械误差而造成的转速不同步情况
    - 两个轮子单独设置一个转速PID控制器，使小车匀速行驶，参数整定
