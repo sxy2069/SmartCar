@@ -38,9 +38,9 @@
      }
    ```
      字段说明：
-      - "deviceType": 对象类型
-      - "deviceName": 对象名字或者对象ID
-      - "value"：    具体输出的camera数据  
+     "deviceType": 对象类型
+     "deviceName": 对象名字或者对象ID
+     "value"：    具体输出的camera数据  
    - 服务器下发命令给单片机数据格式：
     - 小车控制
       - 间接控制模式，设置模式和速度
@@ -65,12 +65,12 @@
       }
       ```
           字段说明：
-            "deviceType": 对象类型
-            "action": 执行的操作类型，每种对象不一样，以下为电机控制方式
-            - "setName"  设置小车名字或者ID
-            - "indirectControl"：  间接控制  
-            - "directControl"： 直接控制  
-            "value":  具体发送的数据
+          "deviceType": 对象类型
+           "action": 执行的操作类型，每种对象不一样，以下为电机控制方式
+             - "setName"  设置小车名字或者ID
+             - "indirectControl"：  间接控制  
+             - "directControl"： 直接控制  
+           "value":  具体发送的数据
               - "mode":   间接控制时，小车的模式种类
                  - "STOP"
                 - "FORWARD"
