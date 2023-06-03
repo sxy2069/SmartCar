@@ -15,8 +15,9 @@
       - pip install numpy
   - 运行上位机程序：
     Server文件夹下，打开终端，运行一下程序：
-    `python main.py`
-
+    ```
+    python main.py
+    ```
 ### 小车程序
   在vscode中安装插件Platformio IDE作为开发环境
   见Client文件夹，使用ESP32作为主控，使用esp-NOW组网
