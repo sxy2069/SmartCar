@@ -17,6 +17,7 @@ import tkinter.ttk as ttk
 from mylib.myFunction.myfunction import *
 
 def handle(ip_port,new_client):
+    
     json_data= bytearray()
     startFlag = False
     completeFlag = False
@@ -40,19 +41,25 @@ def handle(ip_port,new_client):
                 completeFlag = False
                 inputString = json_data.decode('ascii')
                 json_data = b''
-                #print(inputString)
                 inputJson = json.loads(inputString)
-                if inputJson['sensor'] == "camera":
+                if inputJson['deviceType'] == "camera":
                   x= round(inputJson['value']['x'], 2)
                   y= round(inputJson['value']['y'], 2)
                   x= translate(int(x),500,1000,0,1000)
                   y = translate(int(y),0,500,0,1000)
-                  deviceName = inputJson['device']
+                  deviceName = inputJson['deviceName']
                   clientdict[ip_port[0]]['motorData'][0] = deviceName
                   clientdict[ip_port[0]]['motorData'][1] = x
                   clientdict[ip_port[0]]['motorData'][2] = y
                   clientdict[ip_port[0]]['motorData'][3] = inputJson['value']['angle']
-                  res = "LocalIP is {},point_x is {},point_y is {},angle is {}".format(ip_port[0],x,y,inputJson['value']['angle'])   
+                  res = "LocalIP is {},point_x is {},point_y is {},angle is {}".format(ip_port[0],x,y,inputJson['value']['angle'])
+                elif inputJson['deviceType'] == "battery":
+                  #print(inputJson)
+                  deviceName = inputJson['deviceName']
+                  voltage = inputJson['value']["voltage"]
+                  voltageText = str(voltage) + "V"
+                  voltageNumbers.delete(0, 10)
+                  voltageNumbers.insert(0, voltageText)     
             else:
               print("client Closed")
               clientdict[ip_port[0]]['lable'].remove()
@@ -149,39 +156,53 @@ def cmdSend():
           clientList.delete(0, "end")
     
 def carControl(mode):
-    sendCmd['value']['mode'] = mode
+  global motorMode
+  speed = setSpeed.get()
+  motorMode = mode
+  speed = int(speed)
+  if(speed>=0 and speed <=1023):
+    sendCmd["deviceType"] = "motor"
+    sendCmd["action"] = "indirectControl"
+    sendCmd['value']={"mode":motorMode,"speed":speed}
     cmdSend()
 
-def updateData():
-  speed = entry.get()
+def updateSpeed():
+  global motorMode
+  speed = setSpeed.get()
+  speed = int(speed)
   try:
-    speed = int(speed)
     if(speed>=0 and speed <=1023):
-      sendCmd['value']['speed'] = speed
+      sendCmd["deviceType"] = "motor"
+      sendCmd["action"] = "indirectControl"
+      sendCmd['value']={"mode":motorMode,"speed":speed}
       cmdSend()
   except ValueError as e:
     print(e)
     
+def directControl():
+  leftSpeed = int(speedL.get())
+  rightSpeed = int(speedR.get())
+  if(leftSpeed>=-1023 and leftSpeed <=1023 and rightSpeed>=-1023 and rightSpeed <=1023):
+    sendCmd["deviceType"] = "motor"
+    sendCmd["action"] = "directControl"
+    sendCmd["value"] = {"speedL":leftSpeed,"speedR":rightSpeed}
+    cmdSend()
+  
 def updateName():
-  value = entryName.get()
+  name = setName.get()
   try:
-    sendCmd["device"] = value
+    sendCmd["deviceType"] = "motor"
+    sendCmd["action"] = "setName"
+    sendCmd['value']={"deviceName":name}
     cmdSend()
   except ValueError as e:
     print(e)
 
-def  updatePID():
-  sendCmd["action"] = "set"
-  sendCmd["value"]["KP"] = KP.get()
-  sendCmd["value"]["KI"] = KI.get()
-  cmdSend()
-  sendCmd["action"] = "update"
-  del sendCmd["value"]["KP"]
-  del sendCmd["value"]["KI"]
   
 if __name__ == '__main__':
   
-  sendCmd = {"device":"","actuator":"car","action":"update","value":{"mode":"STOP","speed":0}}
+  sendCmd = {"deviceType":"","action":"","value":{}}
+  motorMode = "STOP"
   clientdict={}
   tk_x =[]
   tk_y =[]
@@ -190,7 +211,6 @@ if __name__ == '__main__':
   root = tk.Tk()
   root.title("Motor_ControlGUI")
   root.geometry('1600x1200')
-  
   fig = plt.figure(figsize=(12,8))
   f_plot =fig.add_subplot(111)#划分区域
   plt.tight_layout()#使画布尽可能大
@@ -211,66 +231,75 @@ if __name__ == '__main__':
   
   b0 = tk.Button(root,text="前进", command = lambda:carControl("FORWARD"))
   b0.pack()
-  b0.place(x=300,y=30)
+  b0.place(x=100,y=20)
   
   b1 = tk.Button(root,text="后退",command = lambda:carControl("BACKWARD"))
   b1.pack()
-  b1.place(x=400,y=30)
+  b1.place(x=150,y=20)
   
   b2 = tk.Button(root,text="左转",command = lambda:carControl("TURNLEFT"))
   b2.pack()
-  b2.place(x=500,y=30)
+  b2.place(x=200,y=20)
   
   b3 = tk.Button(root,text="右转",command = lambda:carControl("TURNRIGHT"))
   b3.pack()
-  b3.place(x=600,y=30)
-  
-  b6 = tk.Button(root,text="停止",command = lambda:carControl("STOP"))
-  b6.pack()
-  b6.place(x=700,y=30)
+  b3.place(x=250,y=20)
   
   b4 = tk.Button(root,text="原地左转",command = lambda:carControl("ROTATELEFT"))
   b4.pack()
-  b4.place(x=300,y=90)
+  b4.place(x=300,y=20)
   
   b5 = tk.Button(root,text="原地右转",command = lambda:carControl("ROTATERIGHT"))
   b5.pack()
-  b5.place(x=400,y=90)
+  b5.place(x=370,y=20)
   
-  b7 = tk.Button(root,text="更新速度",command=updateData)
+  b6 = tk.Button(root,text="停止",command = lambda:carControl("STOP"))
+  b6.pack()
+  b6.place(x=440,y=20)
+  
+  b7 = tk.Button(root,text="更新速度",command=updateSpeed)
   b7.pack()
-  b7.place(x=500,y=70)
+  b7.place(x=100,y=60)
   
-  entry = tk.Entry(root, show=None)
-  entry.pack()
-  entry.place(x=560,y=75)
+  setSpeed = tk.Entry(root, show=None)
+  setSpeed.pack()
+  setSpeed.place(x=165,y=65)
   
   b8 = tk.Button(root,text="设置名字",command=updateName)
   b8.pack()
-  b8.place(x=500,y=100)
+  b8.place(x=100,y=100)
   
-  entryName = tk.Entry(root, show=None)
-  entryName.pack()
-  entryName.place(x=560,y=105)
+  setName = tk.Entry(root, show=None)
+  setName.pack()
+  setName.place(x=165,y=105)
   
-  
-  kib = tk.Button(root,text="PIDUpdate",command=updatePID)
-  kib.pack()
-  kib.place(x=1250,y=65)
+  b9 = tk.Button(root,text="直接控制",command=directControl)
+  b9.pack()
+  b9.place(x=340,y=74)
  
-  kpl = tk.Label(root,text='kp')
-  kpl.pack()
-  kpl.place(x=1325,y=50)
-  KP = tk.Entry(root, show=None)
-  KP.pack()
-  KP.place(x=1350,y=50)
+  lable1 = tk.Label(root,text='左轮速度:')
+  lable1.pack()
+  lable1.place(x=410,y=60)
   
-  kil = tk.Label(root,text='ki')
-  kil.pack()
-  kil.place(x=1325,y=80)
-  KI = tk.Entry(root, show=None)
-  KI.pack()
-  KI.place(x=1350,y=80)
+  lable2 = tk.Label(root,text='右轮速度:')
+  lable2.pack()
+  lable2.place(x=410,y=100)
+  
+  speedL = tk.Entry(root, show=None)
+  speedL.pack()
+  speedL.place(x=470,y=60)
+  
+  speedR = tk.Entry(root, show=None)
+  speedR.pack()
+  speedR.place(x=470,y=100)
+  
+  lable2 = tk.Label(root,text='电量显示:')
+  lable2.pack()
+  lable2.place(x=630,y=60)
+  
+  voltageNumbers = tk.Entry(root, show=None)
+  voltageNumbers.pack()
+  voltageNumbers.place(x=685,y=60)
   
   clientLabel = tk.Label(root,text='客户端IP')
   clientLabel.place(x=970, y=15)

@@ -41,10 +41,11 @@ public:
   void init();
   void forward(uint32_t, uint32_t);
   void backward(uint32_t, uint32_t);
-  void turnLeft(uint32_t);
-  void turnRight(uint32_t);
+  void turnLeft(uint32_t,uint32_t);
+  void turnRight(uint32_t,uint32_t);
   void rotateLeft(uint32_t, uint32_t);
   void rotateRight(uint32_t, uint32_t);
   void stop();
+  void directControl(int32_t, int32_t);
 };
 #endif

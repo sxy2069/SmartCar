@@ -25,13 +25,15 @@ double left_speedValue, right_speedValue;                               // 设�
 double old_left_speedValue = startPWM, old_right_speedValue = startPWM; // 保存电机速度
 uint8_t startFlag = 0;
 
+uint32_t timeCounts = 0;
+double   voltage = 0; //电池电压
 Car car;
 // 接收JSON格式数据
 boolean beginFlag = 0;          // json数据刚开始接收
 unsigned char count = 0;        // 多层json数据计数
 boolean stringComplete = false; // json数据接收完毕一帧数据
 String inputString = "";        // json字符串
-boolean changeSpeedFlag = false;
+uint8_t motorState = 0;
 // 声明定位数据读取函数
 void dataRead();
 void getCor();
@@ -70,13 +72,12 @@ Scheduler ts; // to control your personal task
 void broadcast();       // 板子之间广播信息
 void connectToServer(); // 和上位机交互
 void getCameraData();   // 读取定位信息
-void carChangeSpeed();  // 电机调速
-void PIDHandle();       // PID调节
+void motorControl();    // PID调节
 
 Task BroadcastTask(50, TASK_FOREVER, &broadcast, &ts, true);
 Task ConnectToServerTask(50, TASK_FOREVER, &connectToServer, &ts, true);
 Task GetCameraDataTask(40, TASK_FOREVER, &getCameraData, &ts, true);
-Task PIDTask(50, TASK_FOREVER, &PIDHandle, &ts, true);
+Task MotorControlTask(50, TASK_FOREVER, &motorControl, &ts, true);
 
 PID speed = {0, 0.5, 0.2, 0, 0, 0}; // 速度PID
 
@@ -85,9 +86,10 @@ void connectToServer()
 {
   if (client.connected()) // 尝试访问目标地址
   {
+    timeCounts++;
     StaticJsonDocument<256> doc;
-    doc["device"] = pdata.deviceName;
-    doc["sensor"] = "camera";
+    doc["deviceType"] = "camera";
+    doc["deviceName"] = pdata.deviceName;
     JsonObject root = doc.createNestedObject("value");
     root["x"] = pdata.x;
     root["y"] = pdata.y;
@@ -95,6 +97,17 @@ void connectToServer()
     char json_string[300];
     serializeJson(doc, json_string);
     client.print(json_string);
+    if (timeCounts >= 100)
+    {
+      doc["deviceType"] = "battery";
+      doc["deviceName"] = "battery";
+      JsonObject root = doc.createNestedObject("value");
+      root["voltage"] = (int)(voltage*1000.0)/1000.0; //保留三位小数
+      char json_string[300];
+      serializeJson(doc, json_string);
+      client.print(json_string);
+    }
+
     while (client.available())
     {
       char inChar = client.read();
@@ -132,13 +145,11 @@ void connectToServer()
         Serial.println(error.f_str());
         return;
       }
-
-      pdata.deviceName = doc["device"].as<String>();
-      if (doc["actuator"] == "car")
+      if (doc["deviceType"] == "motor")
       {
-        if (doc["action"] == "update")
+        if (doc["action"] == "indirectControl")
         {
-          changeSpeedFlag = true;
+          motorState = 1;
           if (doc["value"]["mode"] == "STOP")
           {
             cmd.mode = STOP;
@@ -169,11 +180,15 @@ void connectToServer()
           }
           cmd.speed = doc["value"]["speed"];
         }
-        else if (doc["action"] == "set")
+        else if (doc["action"] == "directControl")
         {
-          speed.Proportion = doc["value"]["KP"];
-          speed.Integral = doc["value"]["KI"];
-          //DIFF = doc["value"]["KI"];
+          motorState = 2;
+          left_speedValue = doc["value"]["speedL"];
+          right_speedValue = doc["value"]["speedR"];
+        }
+        else if (doc["action"] == "setName")
+        {
+          pdata.deviceName = doc["value"]["deviceName"].as<String>();
         }
       }
     }
@@ -189,21 +204,22 @@ void connectToServer()
 void getCameraData()
 {
   getCor();
+  double adc_val = analogRead(BATTERYPIN);
+  voltage = (((double)adc_val)/4095)*3.3*4;
 }
-// PID数据结构
 
-// PID控制
-void PIDHandle()
+// 电机控制控制
+void motorControl()
 {
   abs_durationL = abs(durationL);
   abs_durationR = abs(durationR);
-  if (changeSpeedFlag == true)
+  if (motorState == 1)
   {
     if (cmd.speed < 0 || cmd.speed > PWM_Restrict)
     {
       return;
     }
-    changeSpeedFlag = false;
+    motorState = 3;
     startFlag = 1;
     switch (cmd.mode)
     {
@@ -226,94 +242,102 @@ void PIDHandle()
       speed.SetPoint = 0;
     }
   }
-  if (startFlag == 0)
+  else if (motorState == 2)
   {
-    if (cmd.mode == FORWARD || cmd.mode == BACKWARD)
+    car.directControl((int32_t)left_speedValue, (int32_t)right_speedValue);
+  }
+  else if (motorState == 3)
+  {
+    if (startFlag == 0)
     {
-      if (old_left_speedValue < cmd.speed-20 && old_right_speedValue < cmd.speed-20)
+      if (cmd.mode == FORWARD || cmd.mode == BACKWARD)
       {
-        left_speedValue = old_left_speedValue + 20;
-        right_speedValue = old_right_speedValue + 20;
-        //right_speedValue = DIFF*right_speedValue;
-      }else{
-        left_speedValue = cmd.speed;
-        right_speedValue = DIFF*right_speedValue;
-        startFlag =1;  
+        if (old_left_speedValue < cmd.speed - 20 && old_right_speedValue < cmd.speed - 20)
+        {
+          left_speedValue = old_left_speedValue + 20;
+          right_speedValue = old_right_speedValue + 20;
+          // right_speedValue = DIFF*right_speedValue;
+        }
+        else
+        {
+          left_speedValue = cmd.speed;
+          //right_speedValue = DIFF * right_speedValue;
+        }
       }
+      else if (cmd.mode == STOP)
+      {
+        if (old_left_speedValue > 5 && old_right_speedValue > 5)
+        {
+          left_speedValue = old_left_speedValue - 5;
+          right_speedValue = old_right_speedValue - 5;
+        }
+        else
+        {
+          left_speedValue = 0;
+          right_speedValue = 0;
+          startFlag = 1;
+        }
+      }
+      int dTotal = abs_durationL - abs_durationR;  // 计算两个轮子的转速差
+      float gapValue = IncPIDCalc(&speed, dTotal); // 进行PID调速
+      // left_speedValue = left_speedValue + gapValue;//调节左轮功率值
+      right_speedValue = right_speedValue - gapValue; // 调节右轮功率值
+      // if (timeCount >= 10)
+      //{
+      //  timeCount = 0;
+      // Serial.print("abs_durationL::");
+      // Serial.println(abs_durationL);
+      // Serial.print("abs_durationR::");
+      // Serial.println(abs_durationR);
+      // Serial.print("dTotal::");
+      // Serial.println(dTotal);
+      // Serial.print("gapValue::");
+      // Serial.print(" ");
+      // Serial.println(gapValue);
+      // Serial.print(" ");
+      // Serial.print("left_speedValue=");
+      // Serial.println(left_speedValue);
+      // Serial.print(" ");
+      // Serial.print("right_speedValue=");
+      // Serial.println(right_speedValue);
+      // }
+      if (left_speedValue < startPWM)
+        left_speedValue = startPWM;
+      else if (left_speedValue > PWM_Restrict)
+        left_speedValue = PWM_Restrict;
+      if (right_speedValue < startPWM)
+        right_speedValue = startPWM;
+      else if (right_speedValue > PWM_Restrict)
+        right_speedValue = PWM_Restrict;
+      old_left_speedValue = left_speedValue;
+      old_right_speedValue = right_speedValue;
     }
-    else if (cmd.mode == STOP)
+    switch (cmd.mode)
     {
-      if (old_left_speedValue > 5 && old_right_speedValue > 5)
-      {
-        left_speedValue = old_left_speedValue - 5;
-        right_speedValue = old_right_speedValue - 5;
-      }else{
-        left_speedValue = 0;
-        right_speedValue = 0;
-        startFlag =1;
-      }
+    case FORWARD:
+      car.forward(left_speedValue, right_speedValue);
+      break;
+    case BACKWARD:
+      car.backward(left_speedValue, right_speedValue);
+      break;
+    case TURNLEFT:
+      car.turnLeft(0, right_speedValue);
+      break;
+    case TURNRIGHT:
+      car.turnRight(left_speedValue, 0);
+      break;
+    case ROTATELEFT:
+      car.rotateLeft(left_speedValue, right_speedValue);
+      break;
+    case ROTATERIGHT:
+      car.rotateRight(left_speedValue, right_speedValue);
+      break;
+    case STOP:
+      car.stop();
+      break;
     }
   }
-  int dTotal = abs_durationL - abs_durationR;//计算两个轮子的转速差
-  float gapValue = IncPIDCalc(&speed, dTotal);//进行PID调速
-  //left_speedValue = left_speedValue + gapValue;//调节左轮功率值
-  right_speedValue = right_speedValue - gapValue;//调节右轮功率值
-  
-  timeCount += 1;//输出调试信息
-  //if (timeCount >= 10)
-  //{
-   // timeCount = 0;
-    //Serial.print("abs_durationL::");
-    //Serial.println(abs_durationL);
-    //Serial.print("abs_durationR::");
-    //Serial.println(abs_durationR);
-    Serial.print("dTotal::");
-    Serial.println(dTotal);
-    //Serial.print("gapValue::");
-    //Serial.print(" ");
-    //Serial.println(gapValue);
-    //Serial.print(" ");
-    Serial.print("left_speedValue=");
-    Serial.println(left_speedValue);
-    //Serial.print(" ");
-    Serial.print("right_speedValue=");
-    Serial.println(right_speedValue);
- // }
-  if (left_speedValue < startPWM)
-    left_speedValue = startPWM;
-  else if (left_speedValue > PWM_Restrict)
-    left_speedValue = PWM_Restrict;
-  if (right_speedValue < startPWM)
-    right_speedValue = startPWM;
-  else if (right_speedValue > PWM_Restrict)
-    right_speedValue = PWM_Restrict;
-  old_left_speedValue = left_speedValue;
-  old_right_speedValue = right_speedValue;
 
-  switch (cmd.mode)
-  {
-  case FORWARD:
-    car.forward(left_speedValue, right_speedValue);
-    break;
-  case BACKWARD:
-    car.backward(left_speedValue, right_speedValue);
-    break;
-  case TURNLEFT:
-    car.turnLeft(right_speedValue);
-    break;
-  case TURNRIGHT:
-    car.turnRight(left_speedValue);
-    break;
-  case ROTATELEFT:
-    car.rotateLeft(left_speedValue, right_speedValue);
-    break;
-  case ROTATERIGHT:
-    car.rotateRight(left_speedValue, right_speedValue);
-    break;
-  case STOP:
-    car.stop();
-    break;
-  }
   durationL = 0; // 计数清零
   durationR = 0; // 计数清零
 }
