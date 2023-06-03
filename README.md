@@ -5,7 +5,7 @@
   - 路由器SSID：Freedomislife
   - 路由器PASW：Freedomislife
   - 路由器地址：192.168.5.1
-  - 
+  
 ### 运行服务器端程序
   - 服务器端IP：192.168.5.100
   - 服务器端PORT：5650
