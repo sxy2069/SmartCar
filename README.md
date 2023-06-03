@@ -43,21 +43,21 @@
     - "value"：    具体输出的camera数据  
    - 服务器下发命令给单片机数据格式：
     - 小车控制
-     - 间接控制模式，设置模式和速度
+      - 间接控制模式，设置模式和速度
       ```
       {"deviceType":"motor",
        "action":"directControl",
        "value":{"mode":"STOP","speed":0} 
       }
       ```
-     - 直接控制模式，分别设置两个电机的速度，数值正负表示方向，数值绝对值大小表示速度快慢
+      - 直接控制模式，分别设置两个电机的速度，数值正负表示方向，数值绝对值大小表示速度快慢
       ```
       {"deviceType":"motor",
        "action":"indirectControl",
        "value":{"speedL":0,"speedR":0} 
       }
       ```
-     - 设置小车名字
+      - 设置小车名字
       ```
       {"deviceType":"motor",
        "action":"setName",
