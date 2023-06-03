@@ -22,7 +22,7 @@
   见Client文件夹，使用ESP32作为主控，使用esp-NOW组网
 
 ### 通信数据格式定义
-  1. 定位传感器上传服务器数据:
+   - 定位传感器上传服务器数据:
   ```
   {"deviceType": "camera",
    "deviceName": "camera",
