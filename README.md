@@ -24,30 +24,32 @@
 ### 通信数据格式定义
   - 定位传感器上传服务器数据:
   ```
-  {"device": "deviceName",
-   "sensor": "carera",
+  {"deviceType": "deviceName",
+   "deviceName": "carera",
    "value" : {"x": 10,"y":100,"angle":60}
   }
-  "device":  小车name，默认为macAddress，可更改
-   "sensor": 操作对象
+  "deviceType": 对象类型
+   "deviceName": 对象名字
+   "value"：    具体数据，如果是电池，则此处定义为{"voltage": 10}
   ```
  - 服务器下发命令格式：
  ```
- {"device":"car1",
- "actuator":"car",
- "action":"update",
+ {"deviceType":"motor",
+  "deviceName": "car1"
+ "action":"setName",
  "value":{"mode":"STOP","speed":0} 
  }
   ```
  json数据key含义：
   ```
-  "device":  carName，可设置
-  "actuator"：操作对象
-  "action":
-    "set"
-    "get"
-    "update"   
-  "mode": 
+  ""deviceType"": 对象类型
+  "deviceName": 对象名字
+  "action":     执行的操作类型，每种对象不一样，以下为电机控制方式
+    "setName"  
+    "indirectControl"    
+    "directControl"  
+ "value":  具体发送的数据
+  "mode":   间接控制时，小车的模式种类
     "STOP"
     "FORWARD"
     "BACKWARD"
@@ -65,6 +67,7 @@
    - 小车程序整理优化
    - 小车各接口例子
    - 下一版本PCB电路优化
+   - 电量显示，如果可以，最好做到点击哪个小车，即显示那个小车的电量
 
 ### PID控制相关:
  - 目前主要目的为控制小车沿直线行走，但由于电机机械特性和PID算法或者参数整定等原因，目前效果不是很理想。
