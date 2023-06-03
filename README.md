@@ -72,7 +72,7 @@
               "directControl"： 直接控制  
            "value":  具体发送的数据
                "mode":   间接控制时，小车的模式种类
-                  "STOP"
+                 "STOP"
                  "FORWARD"
                  "BACKWARD"
                  "TURNLEFT"
@@ -82,7 +82,7 @@
                "speed": 小车速度(0-1023)
                "speedL": 小车左轮方向和速度(-1023到1023),正负表示方向，数值绝对值大小表示速度大小
                "speedR": 小车左轮方向和速度(-1023到1023)，正负表示方向，数值绝对值大小表示速度大小
-                "deviceName": 小车名字
+               "deviceName": 小车名字
     
 ### todolist :
    - 解决两个电机之间因为机械误差而造成的转速不同步情况
