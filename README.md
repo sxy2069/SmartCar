@@ -5,19 +5,24 @@
   - 路由器SSID：Freedomislife
   - 路由器PASW：Freedomislife
   - 路由器地址：192.168.5.1
+  - 
 ### 运行服务器端程序
   - 服务器端IP：192.168.5.100
   - 服务器端PORT：5650
+  - 
 ###### 主机环境
   - 安装python3
   - 安装python包：
-      - pip install matplotlib
-      - pip install numpy
+  ```
+  pip install matplotlib -i https://pypi.tuna.tsinghua.edu.cn/simple
+  pip install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
+   ```
   - 运行上位机程序：
     Server文件夹下，打开终端，运行一下程序：
     ```
     python main.py
     ```
+    
 ### 小车程序
   在vscode中安装插件Platformio IDE作为开发环境
   见Client文件夹，使用ESP32作为主控，使用esp-NOW组网
@@ -66,11 +71,11 @@
       ```
           字段说明：
           "deviceType": 对象类型
-           "action": 执行的操作类型，每种对象不一样，以下为电机控制方式
+          "action": 执行的操作类型，每种对象不一样，以下为电机控制方式
               "setName"  设置小车名字或者ID
               "indirectControl"：  间接控制  
               "directControl"： 直接控制  
-           "value":  具体发送的数据
+          "value":  具体发送的数据
                "mode":   间接控制时，小车的模式种类
                  "STOP"
                  "FORWARD"
