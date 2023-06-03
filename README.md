@@ -25,7 +25,7 @@
   - 定位传感器上传服务器数据:
   ```
   {"deviceType": "deviceName",
-   "deviceName": "carera",
+   "deviceName": "camera",
    "value" : {"x": 10,"y":100,"angle":60}
   }
   "deviceType": 对象类型
