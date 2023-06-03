@@ -24,20 +24,20 @@
 
 ### 通信数据格式定义
    - 定位传感器上传服务器数据:
-    ```
-    {"deviceType": "camera",
+   ```
+   {"deviceType": "camera",
     "deviceName": "camera",
     "value" : {"x": 10,"y":100,"angle":60}
-    }
-    ```
+   }
+   ```
    - 电池电量上传服务器数据：
-     ```
+   ```
      {"deviceType": "battery",
       "deviceName": "battery",
       "value" : {"voltage": 10}
      }
-     ```
-  字段说明：
+   ```
+   字段说明：
     - "deviceType": 对象类型
     - "deviceName": 对象名字或者对象ID
     - "value"：    具体输出的camera数据  
