@@ -31,20 +31,17 @@
    - 定位传感器上传服务器数据:
    ```
    {"deviceType": "camera",
-    "deviceName": "camera",
     "value" : {"x": 10,"y":100,"angle":60}
    }
    ```
    - 电池电量上传服务器数据：
    ```
      {"deviceType": "battery",
-      "deviceName": "battery",
       "value" : {"voltage": 10}
      }
    ```
      字段说明：
      "deviceType": 对象类型
-     "deviceName": 对象名字或者对象ID
      "value"：    具体输出的数据  
    - 服务器下发命令给单片机数据格式：
    1. 小车控制

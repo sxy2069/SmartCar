@@ -16,9 +16,9 @@ import tkinter.ttk as ttk
 
 from mylib.myFunction.myfunction import *
 
-def handle(ip_port,new_client):
-    
-    json_data= bytearray()
+
+def handle(ip_port,new_client): 
+    json_data = bytearray()
     startFlag = False
     completeFlag = False
     startCount = 0
@@ -42,26 +42,21 @@ def handle(ip_port,new_client):
                 inputString = json_data.decode('ascii')
                 json_data = b''
                 inputJson = json.loads(inputString)
-                if inputJson['deviceType'] == "camera":
+                if inputJson['deviceType'] == "camera": #定位器数据
                   x= round(inputJson['value']['x'], 2)
                   y= round(inputJson['value']['y'], 2)
-                  x= translate(int(x),500,1000,0,1000)
-                  y = translate(int(y),0,500,0,1000)
-                  deviceName = inputJson['deviceName']
-                  clientdict[ip_port[0]]['motorData'][0] = deviceName
-                  clientdict[ip_port[0]]['motorData'][1] = x
-                  clientdict[ip_port[0]]['motorData'][2] = y
-                  clientdict[ip_port[0]]['motorData'][3] = inputJson['value']['angle']
+                  #x= translate(int(x),500,1000,0,1000) # 数据范围映射
+                  #y = translate(int(y),0,500,0,1000)
+                  clientdict[ip_port[0]]['camera'][0] = x
+                  clientdict[ip_port[0]]['camera'][1] = y
+                  clientdict[ip_port[0]]['camera'][2] = inputJson['value']['angle']
                   res = "LocalIP is {},point_x is {},point_y is {},angle is {}".format(ip_port[0],x,y,inputJson['value']['angle'])
-                elif inputJson['deviceType'] == "battery":
-                  #print(inputJson)
-                  deviceName = inputJson['deviceName']
-                  voltage = inputJson['value']["voltage"]
-                  voltageText = str(voltage) + "V"
-                  voltageNumbers.delete(0, 10)
-                  voltageNumbers.insert(0, voltageText)     
+                elif inputJson['deviceType'] == "battery": # 电池电量
+                  clientdict[ip_port[0]]['voltage'] = inputJson['value']['voltage']
+                  updateVoltage()
             else:
               print("client Closed")
+              print(clientdict)
               clientdict[ip_port[0]]['lable'].remove()
               clientdict.pop(ip_port[0],None)
               set_optionmenu(list(clientdict))
@@ -71,19 +66,19 @@ def handle(ip_port,new_client):
         clientdict[ip_port[0]]['lable'].remove()
         clientdict.pop(ip_port[0],None)
         set_optionmenu(list(clientdict))
-        print(e)
+        #print(e)
     except OSError as e:
         new_client.close()
         clientdict[ip_port[0]]['lable'].remove()
         clientdict.pop(ip_port[0],None)
         set_optionmenu(list(clientdict))
-        print (e)
+        #print (e)
     except ConnectionResetError as e:
         new_client.close()
         clientdict[ip_port[0]]['lable'].remove()
         clientdict.pop(ip_port[0],None)
         set_optionmenu(list(clientdict))
-        print (e)      
+        #print (e)  
               
 def tcpServer():
     tcp_server_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -92,13 +87,14 @@ def tcpServer():
     tcp_server_socket.setsockopt(socket.SOL_TCP, socket.TCP_KEEPIDLE, 3) #空闲多久发送keep-alive包
     tcp_server_socket.setsockopt(socket.SOL_TCP, socket.TCP_KEEPINTVL, 1) #多久循环一次
     tcp_server_socket.setsockopt(socket.SOL_TCP, socket.TCP_KEEPCNT, 3) # 最大重试次数，这里所示：如果发了10次keep-alive包，都没有收到响应，就可以认为连接已经断开
-    tcp_server_socket.bind(('192.168.5.100',5650))
+    tcp_server_socket.bind(IPADDRESS)
     tcp_server_socket.listen(10)
     while True:
       new_client , ip_port = tcp_server_socket.accept()
       clientdict[ip_port[0]]={}
       clientdict[ip_port[0]]['client']= new_client
-      clientdict[ip_port[0]]['motorData']= [0,0,0,0]
+      clientdict[ip_port[0]]['camera']= [0,0,0]
+      clientdict[ip_port[0]]['voltage']= 7.4
       clientdict[ip_port[0]]['lable']= f_plot.annotate('',xy=(0,0))
       set_optionmenu(list(clientdict))
       sub_thread = threading.Thread(target=handle,args=(ip_port,new_client))
@@ -113,9 +109,9 @@ def update(num):
   tk_y =[]
   if len(clientdict): 
     for value in clientdict.values():
-      tk_x.append(value['motorData'][1])
-      tk_y.append(value['motorData'][2])
-      value['lable'].set(x=value['motorData'][1]-70,y=value['motorData'][2]-20,text='name:{}{}x:{},y:{},angle:{}'.format(value['motorData'][0],'\n',value['motorData'][1],value['motorData'][2],value['motorData'][3]))
+      tk_x.append(value['camera'][0])
+      tk_y.append(value['camera'][1])
+      value['lable'].set(x=value['camera'][0]-70,y=value['camera'][1]-20,text='name:{}{}x:{},y:{},angle:{}'.format('daiding','\n',value['camera'][0],value['camera'][1],value['camera'][2]))
   data = [[x, y] for x, y in zip(tk_x,tk_y)]
   if len(data):
     scat.set_offsets(data)
@@ -124,34 +120,34 @@ def update(num):
   return scat,
 
 def set_optionmenu(opl:list):
-    clientList.delete(0, "end") 
+    clientList.delete(1, "end") 
     for op in opl:
-        clientList.insert('end', op)
-    clientList.insert(0, "BROADCAST")
+        clientList.insert(1, op)
+    
 
 def cmdSend():
     if clientList.curselection():
-      ipAddress = clientList.get(clientList.curselection())
-      clientHost = clientdict.get(ipAddress)
-      if clientHost:
-        try:
-          clientHost['client'].send(json.dumps(sendCmd).encode())
-        except ConnectionResetError as e:
-          clientHost['client'].close()
-          clientHost['lable'].remove()
-          clientdict.pop(ipAddress,None)
-          set_optionmenu(list(clientdict))
-      elif(ipAddress =="BROADCAST"):
-        if clientdict:
-          for x,y in clientdict.items():
-            try:  
-              y['client'].send(json.dumps(sendCmd).encode())
-            except ConnectionResetError as e:
-              y['client'].close()
-              y['lable'].remove()
-              clientdict.pop(x,None)
-              set_optionmenu(list(clientdict))
-              print ("789")
+      for index in clientList.curselection():
+        ipAddress = clientList.get(index)
+        clientHost = clientdict.get(ipAddress)
+        if clientHost:
+          try:
+            clientHost['client'].send(json.dumps(sendCmd).encode())
+          except ConnectionResetError as e:
+            clientHost['client'].close()
+            clientHost['lable'].remove()
+            clientdict.pop(ipAddress,None)
+            set_optionmenu(list(clientdict))
+        elif(ipAddress =="BROADCAST"):
+          if clientdict:
+            for x,y in clientdict.items():
+              try:  
+                y['client'].send(json.dumps(sendCmd).encode())
+              except ConnectionResetError as e:
+                y['client'].close()
+                y['lable'].remove()
+                clientdict.pop(x,None)
+                set_optionmenu(list(clientdict))
         else:
           clientList.delete(0, "end")
     
@@ -170,14 +166,11 @@ def updateSpeed():
   global motorMode
   speed = setSpeed.get()
   speed = int(speed)
-  try:
-    if(speed>=0 and speed <=1023):
-      sendCmd["deviceType"] = "motor"
-      sendCmd["action"] = "indirectControl"
-      sendCmd['value']={"mode":motorMode,"speed":speed}
-      cmdSend()
-  except ValueError as e:
-    print(e)
+  if(speed>=0 and speed <=1023):
+    sendCmd["deviceType"] = "motor"
+    sendCmd["action"] = "indirectControl"
+    sendCmd['value']={"mode":motorMode,"speed":speed}
+    cmdSend()
     
 def directControl():
   leftSpeed = int(speedL.get())
@@ -190,17 +183,36 @@ def directControl():
   
 def updateName():
   name = setName.get()
-  try:
-    sendCmd["deviceType"] = "motor"
-    sendCmd["action"] = "setName"
-    sendCmd['value']={"deviceName":name}
-    cmdSend()
-  except ValueError as e:
-    print(e)
+  sendCmd["deviceType"] = "motor"
+  sendCmd["action"] = "setName"
+  sendCmd['value']={"deviceName":name}
+  cmdSend()
 
-  
+def onSelected(event):
+  if clientList.curselection():
+      if clientList.curselection()[0]!=0:
+        ipAddress = clientList.get(clientList.curselection()[0])
+        clientHost = clientdict.get(ipAddress)
+        if clientHost:
+          voltage = clientHost["voltage"]
+          voltageText = str(voltage) + "V"
+          voltageNumbers.delete(0, 10)
+          voltageNumbers.insert(0, voltageText)  
+
+def updateVoltage():
+  if clientList.curselection():
+      if clientList.curselection()[0]!=0:
+        ipAddress = clientList.get(clientList.curselection()[0])
+        clientHost = clientdict.get(ipAddress)
+        if clientHost:
+          voltage = clientHost["voltage"]
+          voltageText = str(voltage) + "V"
+          voltageNumbers.delete(0, 10)
+          voltageNumbers.insert(0, voltageText)  
+
+         
 if __name__ == '__main__':
-  
+  IPADDRESS =  ("192.168.5.103",5650)
   sendCmd = {"deviceType":"","action":"","value":{}}
   motorMode = "STOP"
   clientdict={}
@@ -217,7 +229,7 @@ if __name__ == '__main__':
   f_plot.set_xlabel('point_x')
   f_plot.set_ylabel('point_y')
   f_plot.set_title('CameraImage')
-  lj = f_plot.annotate('',xy=(0,0))
+  f_plot.annotate('',xy=(0,0))
   plt.axis([0,1000,0,1000])                          
   scat = plt.scatter(tk_x,tk_y,s=100,c='y')
   ax = plt.gca()                                 #获取到当前坐标轴信息
@@ -264,6 +276,7 @@ if __name__ == '__main__':
   setSpeed = tk.Entry(root, show=None)
   setSpeed.pack()
   setSpeed.place(x=165,y=65)
+  setSpeed.insert(0, "200")
   
   b8 = tk.Button(root,text="设置名字",command=updateName)
   b8.pack()
@@ -288,11 +301,13 @@ if __name__ == '__main__':
   speedL = tk.Entry(root, show=None)
   speedL.pack()
   speedL.place(x=470,y=60)
-  
+  speedL.insert(0, "200")
+
   speedR = tk.Entry(root, show=None)
   speedR.pack()
   speedR.place(x=470,y=100)
-  
+  speedR.insert(0, "200")
+
   lable2 = tk.Label(root,text='电量显示:')
   lable2.pack()
   lable2.place(x=630,y=60)
@@ -305,14 +320,17 @@ if __name__ == '__main__':
   clientLabel.place(x=970, y=15)
   
   v = tk.StringVar(root)
-  clientList = tk.Listbox(root, height=5, width=50)
+  clientList = tk.Listbox(root, height=5, width=50,selectmode=tk.EXTENDED)
+  clientList.insert(0, "BROADCAST")
+  clientList.bind('<<ListboxSelect>>',onSelected)
   clientList.place(x=850, y=40)
-  
+
+
   tcp_thread = threading.Thread(target=tcpServer)
   tcp_thread.setDaemon(True)
   tcp_thread.start()
-  
   root.mainloop()  # 进入事件循环
+
   
 
     
