@@ -147,7 +147,7 @@ void connectToServer()
       }
       if (doc["deviceType"] == "motor")
       {
-        if (doc["action"] == "indirectControl")
+        if (doc["action"] == "indirect")
         {
           motorState = 1;
           if (doc["value"]["mode"] == "STOP")
@@ -180,7 +180,7 @@ void connectToServer()
           }
           cmd.speed = doc["value"]["speed"];
         }
-        else if (doc["action"] == "directControl")
+        else if (doc["action"] == "direct")
         {
           motorState = 2;
           left_speedValue = doc["value"]["speedL"];

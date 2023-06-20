@@ -73,8 +73,8 @@
           "deviceType": 对象类型
           "action": 执行的操作类型，每种对象不一样，以下为电机控制方式
               "setName"  设置小车名字或者ID
-              "indirectControl"：  间接控制  
-              "directControl"： 直接控制  
+              "indirect"：  间接控制  
+              "direct"： 直接控制  
           "value":  具体发送的数据
                "mode":   间接控制时，小车的模式种类
                  "STOP"

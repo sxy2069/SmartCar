@@ -6,3 +6,7 @@ def translate(value, leftMin, leftMax, rightMin, rightMax):
     rightSpan = rightMax - rightMin
     valueScaled = float(value - leftMin) / float(leftSpan)
     return rightMin + (valueScaled * rightSpan)
+
+
+if __name__ == '__main__':
+    print(translate(10,0,100,0,1000))
