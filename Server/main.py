@@ -1,5 +1,6 @@
 #!/usr/bin/python
 #coding:utf-8
+
 import socket
 import threading
 import json
@@ -221,7 +222,7 @@ if __name__ == '__main__':
   
   matplotlib.use('TkAgg')
   root = tk.Tk()
-  root.title("Motor_ControlGUI")
+  root.title("SmartCarGUI")
   root.geometry('1600x1200')
   fig = plt.figure(figsize=(12,8))
   f_plot =fig.add_subplot(111)#划分区域
@@ -230,7 +231,7 @@ if __name__ == '__main__':
   f_plot.set_ylabel('point_y')
   f_plot.set_title('CameraImage')
   f_plot.annotate('',xy=(0,0))
-  plt.axis([0,1000,0,1000])                          
+  plt.axis([0,1600,0,1600])                          
   scat = plt.scatter(tk_x,tk_y,s=100,c='y')
   ax = plt.gca()                                 #获取到当前坐标轴信息
   ax.xaxis.set_ticks_position('top')   #将X坐标轴移到上面
@@ -238,7 +239,7 @@ if __name__ == '__main__':
   ani = animation.FuncAnimation(fig=fig,func=update,frames=10,interval=20)
   
   canvas_spice = FigureCanvasTkAgg(fig,root)
-  canvas_spice.get_tk_widget().place(x=10,y=150)
+  canvas_spice.get_tk_widget().place(x=50,y=140)
   canvas_spice.draw()
   
   b0 = tk.Button(root,text="前进", command = lambda:carControl("FORWARD"))
@@ -288,42 +289,42 @@ if __name__ == '__main__':
   
   b9 = tk.Button(root,text="直接控制",command=directControl)
   b9.pack()
-  b9.place(x=340,y=74)
+  b9.place(x=600,y=20)
  
   lable1 = tk.Label(root,text='左轮速度:')
   lable1.pack()
-  lable1.place(x=410,y=60)
+  lable1.place(x=510,y=60)
   
   lable2 = tk.Label(root,text='右轮速度:')
   lable2.pack()
-  lable2.place(x=410,y=100)
+  lable2.place(x=510,y=100)
   
   speedL = tk.Entry(root, show=None)
   speedL.pack()
-  speedL.place(x=470,y=60)
+  speedL.place(x=570,y=60)
   speedL.insert(0, "200")
 
   speedR = tk.Entry(root, show=None)
   speedR.pack()
-  speedR.place(x=470,y=100)
+  speedR.place(x=570,y=100)
   speedR.insert(0, "200")
 
   lable2 = tk.Label(root,text='电量显示:')
   lable2.pack()
-  lable2.place(x=630,y=60)
+  lable2.place(x=730,y=60)
   
   voltageNumbers = tk.Entry(root, show=None)
   voltageNumbers.pack()
-  voltageNumbers.place(x=685,y=60)
+  voltageNumbers.place(x=785,y=60)
   
   clientLabel = tk.Label(root,text='客户端IP')
-  clientLabel.place(x=970, y=15)
+  clientLabel.place(x=1350, y=5)
   
   v = tk.StringVar(root)
-  clientList = tk.Listbox(root, height=5, width=50,selectmode=tk.EXTENDED)
+  clientList = tk.Listbox(root, height=10, width=20,selectmode=tk.EXTENDED)
   clientList.insert(0, "BROADCAST")
   clientList.bind('<<ListboxSelect>>',onSelected)
-  clientList.place(x=850, y=40)
+  clientList.place(x=1300, y=25)
 
 
   tcp_thread = threading.Thread(target=tcpServer)
