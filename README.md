@@ -23,6 +23,7 @@
     python main.py
     ```
     运行界面如下图所示：
+    
     ![image](https://github.com/sxy2069/SmartCar/assets/19299869/c269a7c9-2ab2-427f-bfaa-7b53a7f868ed)
 
 ### 小车程序
