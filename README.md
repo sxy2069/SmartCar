@@ -22,7 +22,9 @@
     ```
     python main.py
     ```
-    
+    运行界面如下图所示：
+    ![image](https://github.com/sxy2069/SmartCar/assets/19299869/c269a7c9-2ab2-427f-bfaa-7b53a7f868ed)
+
 ### 小车程序
   在vscode中安装插件Platformio IDE作为开发环境
   见Client文件夹，使用ESP32作为主控，使用esp-NOW组网
