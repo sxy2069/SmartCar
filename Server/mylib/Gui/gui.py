@@ -11,7 +11,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import json
 
-def updateGuiData(num):
+def updateGui(num):
   global tk_x
   global tk_y
   tk_x =[]
@@ -126,8 +126,10 @@ def updateVoltage():
 sendCmd = {"deviceType":"","action":"","value":{}}
 motorMode = "STOP"
 clientdict={}
+
 tk_x =[]
 tk_y =[]
+
 matplotlib.use('TkAgg')
 root = tk.Tk()
 root.title("SmartCarGUI")
@@ -144,7 +146,7 @@ scat = plt.scatter(tk_x,tk_y,s=100,c='y')
 ax = plt.gca()                       #获取到当前坐标轴信息
 ax.xaxis.set_ticks_position('top')   #将X坐标轴移到上面
 ax.invert_yaxis()  
-ani = animation.FuncAnimation(fig=fig,func=updateGuiData,frames=10,interval=20)
+ani = animation.FuncAnimation(fig=fig,func=updateGui,frames=10,interval=20)
 
 canvas_spice = FigureCanvasTkAgg(fig,root)
 canvas_spice.get_tk_widget().place(x=50,y=140)

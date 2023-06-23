@@ -17,7 +17,6 @@ def handle(ip_port,new_client):
     clientdict[ip_port[0]]['lable']= f_plot.annotate('',xy=(0,0))
     clientdict[ip_port[0]]['show']= True
     set_optionmenu(list(clientdict))
-    showFlag = True
     json_data = bytearray()
     startFlag = False
     completeFlag = False
@@ -51,6 +50,7 @@ def handle(ip_port,new_client):
                   clientdict[ip_port[0]]['camera'][1] = y
                   clientdict[ip_port[0]]['camera'][2] = inputJson['value']['angle']
                   res = "LocalIP is {},point_x is {},point_y is {},angle is {}".format(ip_port[0],x,y,inputJson['value']['angle'])
+                  #print(res)
                 elif inputJson['deviceType'] == "battery": # 电池电量
                   clientdict[ip_port[0]]['voltage'] = inputJson['value']['voltage']
                   updateVoltage()
