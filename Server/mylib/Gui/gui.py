@@ -128,7 +128,6 @@ motorMode = "STOP"
 clientdict={}
 tk_x =[]
 tk_y =[]
-showFlag = False
 matplotlib.use('TkAgg')
 root = tk.Tk()
 root.title("SmartCarGUI")
