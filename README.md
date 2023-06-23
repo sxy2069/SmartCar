@@ -67,7 +67,7 @@
        "action":"indirectControl",
        "value":{"speedL":0,"speedR":0} 
       }
-      ```
+  ```
 - 设置小车名字
   ```
       {"deviceType":"motor",
