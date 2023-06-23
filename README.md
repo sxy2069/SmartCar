@@ -59,7 +59,7 @@
        "action":"directControl",
        "value":{"mode":"STOP","speed":0} 
       }
-      ```
+  ```
 - 直接控制模式
   分别设置两个电机的速度，数值正负表示方向，数值绝对值大小表示速度快慢
   ```
@@ -74,7 +74,7 @@
        "action":"setName",
        "value":{"deviceName":“car1”} 
       }
-      ```
+  ```
           字段说明：
           "deviceType": 对象类型
           "action": 执行的操作类型，每种对象不一样，以下为电机控制方式
