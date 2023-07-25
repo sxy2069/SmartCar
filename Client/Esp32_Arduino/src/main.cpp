@@ -174,7 +174,6 @@ void connectToServer()
     timeCounts++;
     StaticJsonDocument<256> doc;
     doc["deviceType"] = "camera";
-    doc["deviceName"] = pdata.deviceName;
     JsonObject root = doc.createNestedObject("value");
     root["x"] = pdata.x;
     root["y"] = pdata.y;
@@ -185,7 +184,6 @@ void connectToServer()
     if (timeCounts >= 100)
     {
       doc["deviceType"] = "battery";
-      doc["deviceName"] = "battery";
       JsonObject root = doc.createNestedObject("value");
       root["voltage"] = (int)(voltage*1000.0)/1000.0; //保留三位小数
       char json_string[300];

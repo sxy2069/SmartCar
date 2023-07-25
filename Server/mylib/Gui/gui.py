@@ -11,16 +11,21 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import json
 
-def update(num):
+def updateGui(num):
   global tk_x
   global tk_y
   tk_x =[]
   tk_y =[]
   if len(clientdict): 
-    for value in clientdict.values():
-      tk_x.append(value['camera'][0])
-      tk_y.append(value['camera'][1])
-      value['lable'].set(x=value['camera'][0]-70,y=value['camera'][1]-20,text='name:{}{}x:{},y:{},angle:{}'.format('daiding','\n',value['camera'][0],value['camera'][1],value['camera'][2]))
+    for key,value in list(clientdict.items()):
+      if value["show"] == True:
+        tk_x.append(value['camera'][0])
+        tk_y.append(value['camera'][1])
+        value['lable'].set(x=value['camera'][0]-70,y=value['camera'][1]-20,text='name:{}{}x:{},y:{},angle:{}'.format('daiding','\n',value['camera'][0],value['camera'][1],value['camera'][2]))
+      else:
+        value['lable'].remove()
+        clientdict.pop(key)
+        set_optionmenu(list(clientdict))
   data = [[x, y] for x, y in zip(tk_x,tk_y)]
   if len(data):
     scat.set_offsets(data)
@@ -31,8 +36,7 @@ def update(num):
 def set_optionmenu(opl:list):
     clientList.delete(1, "end") 
     for op in opl:
-        clientList.insert(1, op)
-    
+       clientList.insert(1, op)
 
 def cmdSend():
     if clientList.curselection():
@@ -122,6 +126,7 @@ def updateVoltage():
 sendCmd = {"deviceType":"","action":"","value":{}}
 motorMode = "STOP"
 clientdict={}
+
 tk_x =[]
 tk_y =[]
 
@@ -141,7 +146,7 @@ scat = plt.scatter(tk_x,tk_y,s=100,c='y')
 ax = plt.gca()                       #获取到当前坐标轴信息
 ax.xaxis.set_ticks_position('top')   #将X坐标轴移到上面
 ax.invert_yaxis()  
-ani = animation.FuncAnimation(fig=fig,func=update,frames=10,interval=20)
+ani = animation.FuncAnimation(fig=fig,func=updateGui,frames=10,interval=20)
 
 canvas_spice = FigureCanvasTkAgg(fig,root)
 canvas_spice.get_tk_widget().place(x=50,y=140)
@@ -230,8 +235,6 @@ clientList = tk.Listbox(root, height=10, width=20,selectmode=tk.EXTENDED)
 clientList.insert(0, "BROADCAST")
 clientList.bind('<<ListboxSelect>>',onSelected)
 clientList.place(x=1300, y=25)
-
-
 
 def gui():
   root.mainloop()  # 进入事件循环

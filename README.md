@@ -1,43 +1,48 @@
 # SmartCar使用说明
   通过TCP协议控制多辆小车运动，并接收小车发送的信息，通信数据格式为json.
-### 环境配置
-配置使用的路由器：
-  - 路由器SSID：Freedomislife
-  - 路由器PASW：Freedomislife
-  - 路由器地址：192.168.5.1
+# 环境配置
+## 路由器配置：
+   - 路由器SSID：Freedomislife
+   - 路由器PASW：Freedomislife
+   - 路由器地址：192.168.5.1
   
-### 运行服务器端程序
-  - 服务器端IP：192.168.5.100
-  - 服务器端PORT：5650
-  
-###### 主机环境
+## 主机环境
   - 安装python3
   - 安装python包：
   ```
   pip install matplotlib -i https://pypi.tuna.tsinghua.edu.cn/simple
   pip install numpy -i https://pypi.tuna.tsinghua.edu.cn/simple
    ```
-  - 运行上位机程序：
-    Server文件夹下，打开终端，运行一下程序：
-    ```
-    python main.py
-    ```
-    运行界面如下图所示：
-    
-    ![image](https://github.com/sxy2069/SmartCar/assets/19299869/c269a7c9-2ab2-427f-bfaa-7b53a7f868ed)
+  ## 服务端程序配置
+  可修改文件mylib/Config/config.py,默认配置如下：
+  ```py
+    IPADDRESS =  ("192.168.5.103",5650)
+  ```
 
-### 小车程序
-  在vscode中安装插件Platformio IDE作为开发环境
-  见Client文件夹，使用ESP32作为主控，使用esp-NOW组网
+# 上位机程序
+  Server文件夹下，打开终端，运行程序：
+  ```
+  python main.py
+  ```
+  运行界面如下图所示：
+  ![image](https://github.com/sxy2069/SmartCar/assets/19299869/c269a7c9-2ab2-427f-bfaa-7b53a7f868ed.png)
 
-### 通信数据格式定义
-   - 定位传感器上传服务器数据:
+# 小车程序
+  在vscode中安装插件Platformio IDE作为开发环境，使用ESP32作为主控，使用esp-NOW组网。程序结构如下：
+  - 主程序: Client/Esp32_Arduino/src/main.cpp
+  - 电机控制程序： Client/Esp32_Arduino/Car
+  - 定位数据程序： Client/Esp32_Arduino/OpticalData
+  - 主控引脚映射： Client/Esp32_Arduino/pinMap
+
+
+# 通信数据格式定义
+## 定位传感器上传服务器数据:
    ```
    {"deviceType": "camera",
     "value" : {"x": 10,"y":100,"angle":60}
    }
    ```
-   - 电池电量上传服务器数据：
+## 电池电量上传服务器数据：
    ```
      {"deviceType": "battery",
       "value" : {"voltage": 10}
@@ -46,29 +51,30 @@
      字段说明：
      "deviceType": 对象类型
      "value"：    具体输出的数据  
-   - 服务器下发命令给单片机数据格式：
-   1. 小车控制
-      - 间接控制模式，设置模式和速度
-      ```
+## 服务器下发命令给单片机数据格式：
+### 小车控制
+- 间接控制模式，设置模式和速度
+  ```
       {"deviceType":"motor",
        "action":"directControl",
        "value":{"mode":"STOP","speed":0} 
       }
-      ```
-      - 直接控制模式，分别设置两个电机的速度，数值正负表示方向，数值绝对值大小表示速度快慢
-      ```
+  ```
+- 直接控制模式
+  分别设置两个电机的速度，数值正负表示方向，数值绝对值大小表示速度快慢
+  ```
       {"deviceType":"motor",
        "action":"indirectControl",
        "value":{"speedL":0,"speedR":0} 
       }
-      ```
-      - 设置小车名字
-      ```
+  ```
+- 设置小车名字
+  ```
       {"deviceType":"motor",
        "action":"setName",
        "value":{"deviceName":“car1”} 
       }
-      ```
+  ```
           字段说明：
           "deviceType": 对象类型
           "action": 执行的操作类型，每种对象不一样，以下为电机控制方式
@@ -93,12 +99,9 @@
    - 解决两个电机之间因为机械误差而造成的转速不同步情况
    - 两个轮子单独设置一个转速PID控制器，使小车匀速行驶，参数整定
    - 尝试使用转速差PID控制器控制小车走直线，参数整定
-   - json 通信数据格式优化
-   - 调试界面错误优化
    - 小车程序整理优化
    - 小车各接口例子
    - 下一版本PCB电路优化
-   - 电量显示，如果可以，最好做到点击哪个小车，即显示那个小车的电量
 
 ### PID控制相关:
  - 目前主要目的为控制小车沿直线行走，但由于电机机械特性和PID算法或者参数整定等原因，目前效果不是很理想。

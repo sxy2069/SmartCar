@@ -15,6 +15,7 @@ def handle(ip_port,new_client):
     clientdict[ip_port[0]]['camera']= [0,0,0]
     clientdict[ip_port[0]]['voltage']= 7.4
     clientdict[ip_port[0]]['lable']= f_plot.annotate('',xy=(0,0))
+    clientdict[ip_port[0]]['show']= True
     set_optionmenu(list(clientdict))
     json_data = bytearray()
     startFlag = False
@@ -44,35 +45,28 @@ def handle(ip_port,new_client):
                   x= round(inputJson['value']['x'], 2)
                   y= round(inputJson['value']['y'], 2)
                   #x= translate(int(x),500,1000,0,1000) # 数据范围映射
-                 # y = translate(int(y),0,500,0,1000)
+                  #y = translate(int(y),0,500,0,1000)
                   clientdict[ip_port[0]]['camera'][0] = x
                   clientdict[ip_port[0]]['camera'][1] = y
                   clientdict[ip_port[0]]['camera'][2] = inputJson['value']['angle']
                   res = "LocalIP is {},point_x is {},point_y is {},angle is {}".format(ip_port[0],x,y,inputJson['value']['angle'])
+                  #print(res)
                 elif inputJson['deviceType'] == "battery": # 电池电量
                   clientdict[ip_port[0]]['voltage'] = inputJson['value']['voltage']
                   updateVoltage()
             else:
-              #clientdict[ip_port[0]]['lable'].remove()
-              clientdict.pop(ip_port[0],None)
-              set_optionmenu(list(clientdict))
+              clientdict[ip_port[0]]['show']= False
               break
     except TimeoutError as e:
         new_client.close()
-        clientdict[ip_port[0]]['lable'].remove()
-        clientdict.pop(ip_port[0],None)
-        set_optionmenu(list(clientdict))
+        clientdict[ip_port[0]]['show']= False
     except OSError as e:
         new_client.close()
-        clientdict[ip_port[0]]['lable'].remove()
-        clientdict.pop(ip_port[0],None)
-        set_optionmenu(list(clientdict))
+        clientdict[ip_port[0]]['show']= False
     except ConnectionResetError as e:
         new_client.close()
-        clientdict[ip_port[0]]['lable'].remove()
-        clientdict.pop(ip_port[0],None)
-        set_optionmenu(list(clientdict))
-              
+        clientdict[ip_port[0]]['show']= False
+
 def tcpServer():
     tcp_server_socket=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
     tcp_server_socket.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,True)
