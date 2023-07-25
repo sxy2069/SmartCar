@@ -96,6 +96,3 @@ if __name__ == '__main__':
   tcp_thread.setDaemon(True)
   tcp_thread.start()
   gui()
-  
-
-    
