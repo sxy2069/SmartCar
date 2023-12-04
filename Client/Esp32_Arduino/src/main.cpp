@@ -53,56 +53,6 @@ float pid_control(float current_value) {
   last_error = error;
   return output;
 }
-// Ziegler-Nichols自动调参算法
-void auto_tune() {
-
-  // 停止其他控制操作，只运行自动调参过程
-  // 设置初始增益
-  kp = 1;
-  ki = 0;
-  kd = 0;
-  // 设置临时采样时间，建议与控制周期相同
-  const float sample_time = dt;
-  // 计算临界增益和周期
-  float kp_critical = 0;
-  float period = 0;
-  while (kp_critical == 0) {
-    // 运行自动调参过程，记录临界增益和周期
-    abs_durationL = abs(durationL);
-    abs_durationR = abs(durationR);
-    float current_value = abs_durationL;
-    control_signal = pid_control(current_value);
-    car.forward(control_signal, control_signal);
-    Serial.print("current_value Init:");
-    Serial.println(control_signal);
-    // 输出控制信号，控制电机转速
-    /*
-    analogWrite(motor1Pin, control_signal);
-    analogWrite(motor2Pin, control_signal);
-    */
-    // 更新周期
-    period += sample_time;
-    // 检查是否出现超调现象
-    if (control_signal == max_output) {
-      kp_critical = kp;
-      break;
-    }
-    // 等待采样时间
-    delay(sample_time * 1000);
-    durationL = 0; // 计数清零
-    durationR = 0; // 计数清零
-  }
-
-  // 计算临界周期和增益
-  float ku = kp_critical;
-  float tu = period;
-
-  // 使用Ziegler-Nichols方法计算PID参数
-  kp = 0.6 * ku;
-  ki = 1.2 * ku / tu;
-  kd = 0.075 * ku * tu;
-}
-
 
 // 设置电机速度
 double left_speedValue, right_speedValue;                               // 设置电机速度
@@ -147,7 +97,7 @@ const char *id = "Freedomislife";
 const char *psw = "Freedomislife";
 
 // 远程服务器地址
-const IPAddress serverIP(192, 168, 5, 100); // 欲访问的服务端IP地址
+const IPAddress serverIP(192, 168, 5, 103); // 欲访问的服务端IP地址
 uint16_t serverPort = 5650;
 WiFiClient client;
 
@@ -333,7 +283,6 @@ void motorControl()
   {
     if (startFlag == 0)
     {
-      /*
       if (cmd.mode == FORWARD || cmd.mode == BACKWARD)
       {
         if (old_left_speedValue < cmd.speed - 20 && old_right_speedValue < cmd.speed - 20)
@@ -362,11 +311,10 @@ void motorControl()
           startFlag = 1;
         }
       }
-      */
+    
       control_signal = pid_control(abs_durationL);
       Serial.print("control_signal");
       Serial.println(control_signal);
-      /*
       int dTotal = abs_durationL - abs_durationR;  // 计算两个轮子的转速差
       float gapValue = IncPIDCalc(&speed, dTotal); // 进行PID调速
       right_speedValue = right_speedValue - gapValue; // 调节右轮功率值
@@ -381,7 +329,6 @@ void motorControl()
     
       old_left_speedValue = left_speedValue;
       old_right_speedValue = right_speedValue;
-      */
     }
     switch (cmd.mode)
     {
@@ -533,7 +480,6 @@ void setup()
   //speed.SetPoint = 0;
   EncoderInitL();
   EncoderInitR();
-  auto_tune();
 }
 
 void loop()
